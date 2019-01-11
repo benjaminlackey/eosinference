@@ -303,7 +303,10 @@ nbns = len(single_bns_properties_list)
 fig, axes = plt.subplots(nbns, 1, figsize=(8, 6*nbns))
 
 for i in range(nbns):
-    ax = axes[i]
+    if nbns==1:
+        ax = axes
+    else:
+        ax = axes[i]
     bounds = radius_bounds_post
     ax.fill_between(bounds[:, 0], bounds[:, 1], bounds[:, 2], color='b', alpha=0.3, zorder=2, label=r'50\% intervals')
     ax.fill_between(bounds[:, 0], bounds[:, 3], bounds[:, 4], color='g', alpha=0.3, zorder=1, label=r'90\% intervals')
@@ -362,7 +365,10 @@ nbns = len(single_bns_properties_list)
 fig, axes = plt.subplots(nbns, 1, figsize=(8, 6*nbns))
 
 for i in range(nbns):
-    ax = axes[i]
+    if nbns==1:
+        ax = axes
+    else:
+        ax = axes[i]
     bounds = lambda_bounds_post
     ax.fill_between(bounds[:, 0], bounds[:, 1], bounds[:, 2], color='b', alpha=0.3, zorder=2, label=r'50\% intervals')
     ax.fill_between(bounds[:, 0], bounds[:, 3], bounds[:, 4], color='g', alpha=0.3, zorder=1, label=r'90\% intervals')

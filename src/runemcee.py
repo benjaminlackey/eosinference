@@ -59,6 +59,7 @@ def load_emcee_samples(filename):
 #      Generate initial walkers for the 4-piece piecewise polytrope EOS.       #
 ################################################################################
 
+# TODO: This is specific to the EOS parameterization. It should go in the specific EOS module.
 def single_initial_walker_params_eospp(
     mc_mean_list, lnp_of_ql_list,
     q_min=0.5, m_min=0.5, m_max=3.2, mass_known=1.93, vs_limit=1.0):

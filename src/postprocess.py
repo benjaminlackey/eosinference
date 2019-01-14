@@ -251,22 +251,58 @@ def hpd_interval(x, percentile=90):
     return xlow, xhigh
 
 
-def bounds_from_curves(ms, curves):
-    """Place upper and lower bounds on a quantity for each mass in ms.
+def bounds_from_curves(ms, curves, percentiles=[50, 90, 100]):
+    """Place symmetric upper and lower bounds on a quantity for each mass in ms.
 
     Parameters
     ----------
     ms : 1d array
         List of masses the curves are evaluated at.
-    curves: 2d-arrays
+    curves : 2d-arrays
         Each row is a curve of the quantity x(mass).
+    percentiles : The percentiles you want
     """
-    bounds = []
-    for j in range(len(ms)):
-        m = ms[j]
-        xs = curves[:, j]
-        x50low, x50high = hpd_interval(xs, percentile=50)
-        x90low, x90high = hpd_interval(xs, percentile=90)
-        bounds.append([m, x50low, x50high, x90low, x90high])
 
-    return np.array(bounds)
+    bounds = []
+    for p in percentiles:
+        # Get lower and upper bounds for each symmetric percentile
+        half_out = (100.0-p)/2.0
+        plow = half_out
+        phigh = 100.0-half_out
+
+        d = {'p':p, 'ms':ms}
+        xlows = []
+        xhighs = []
+        for j in range(len(ms)):
+            m = ms[j]
+            # the value x(m) for each curve at the mass m
+            xs = curves[:, j]
+            # lower and upper percentiles at the mass m
+            xlows.append(np.percentile(xs, plow))
+            xhighs.append(np.percentile(xs, phigh))
+
+        d['lows'] = xlows
+        d['highs'] = xhighs
+        bounds.append(d)
+    return bounds
+
+
+# def bounds_from_curves(ms, curves):
+#     """Place upper and lower bounds on a quantity for each mass in ms.
+#
+#     Parameters
+#     ----------
+#     ms : 1d array
+#         List of masses the curves are evaluated at.
+#     curves: 2d-arrays
+#         Each row is a curve of the quantity x(mass).
+#     """
+#     bounds = []
+#     for j in range(len(ms)):
+#         m = ms[j]
+#         xs = curves[:, j]
+#         x50low, x50high = hpd_interval(xs, percentile=50)
+#         x90low, x90high = hpd_interval(xs, percentile=90)
+#         bounds.append([m, x50low, x50high, x90low, x90high])
+#
+#     return np.array(bounds)

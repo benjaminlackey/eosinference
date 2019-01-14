@@ -16,6 +16,7 @@ import postprocess
 matplotlib.rcParams['figure.figsize'] = (9.7082039325, 6.0)
 matplotlib.rcParams['xtick.labelsize'] = 20.0
 matplotlib.rcParams['ytick.labelsize'] = 20.0
+matplotlib.rcParams['axes.titlesize'] = 25.0
 matplotlib.rcParams['axes.labelsize'] = 25.0
 matplotlib.rcParams['legend.fontsize'] = 17.0
 matplotlib.rcParams['font.family']= 'Times New Roman'
@@ -39,10 +40,16 @@ print('Arguments from command line: {}'.format(args))
 # Copy eos_output_page.html to output directory
 bin_dir = os.path.dirname(os.path.realpath(__file__))
 cwd = os.getcwd()
+os.mkdir(args.outdir)
 cmd = 'cp {}/eos_output_page.html {}/.'.format(bin_dir, args.outdir)
 print(cmd)
 os.system(cmd)
 
+
+################################################################################
+# Extract contents of ns_properties.hdf5 data file.                            #
+################################################################################
+print('Reading data file.')
 
 f = h5py.File(args.infile)
 
@@ -78,12 +85,17 @@ for i in range(nbns):
     single_bns_properties_list.append(d)
 
 # Print some things
-print f['prior'].keys(), f['prior'].attrs.keys()
-print f['posterior'].keys(), f['posterior'].attrs.keys()
-print f['bns_0'].keys(), f['bns_0'].attrs.keys()
+print(f['prior'].keys(), f['prior'].attrs.keys())
+print(f['posterior'].keys(), f['posterior'].attrs.keys())
+print(f['bns_0'].keys(), f['bns_0'].attrs.keys())
 
 f.close()
 
+################################################################################
+# EOS parameter corner plots for prior and posterior.                          #
+# Overlap 1d histograms for prior and posterior.                               #
+################################################################################
+print('Making corner plots and histograms of prior and posterior.')
 
 # TODO: This should not be hardcoded
 labels = [r'$\log(p_1)$', r'$\Gamma_1$', r'$\Gamma_2$', r'$\Gamma_3$']
@@ -100,160 +112,191 @@ fig, axes = postprocess.compare_2_runs(
 fig.savefig(args.outdir+'/compare_prior_posterior.png', format='png', transparent=True, bbox_inches='tight')
 
 
+################################################################################
+# Plot all curves for Radius(Mass) and Lambda(Mass).                           #
+################################################################################
+print('Plotting Radius(Mass) curves and Lambda(Mass) curves for prior and posterior.')
+
+def plot_mass_curves(ax, ms, curves, lowerbound=0.0, ncurves=None):
+    """Plot all x(mass) curves.
+    Mask the curves after they reach the maximum mass,
+    by removing and point with value x<=lowerbound.
+    """
+    # The number of curves to plot
+    if ncurves is None:
+        n = len(curves)
+    else:
+        n = min(ncurves, len(curves))
+
+    # plot the x(mass) curves
+    for i in range(n):
+        xs = curves[i]
+        mask = xs>lowerbound
+        ax.plot(ms[mask], xs[mask], c='gray', lw=0.3)
+
+    ax.minorticks_on()
+    ax.grid(which='major', zorder=0)
+    ax.grid(which='minor', ls=':', zorder=0)
 
 
-radius_bounds_prior = postprocess.bounds_from_curves(ms, radius_curves_prior)
-radius_bounds_post = postprocess.bounds_from_curves(ms, radius_curves_post)
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 6))
 
-lambda_bounds_prior = postprocess.bounds_from_curves(ms, lambda_curves_prior)
-lambda_bounds_post = postprocess.bounds_from_curves(ms, lambda_curves_post)
+curves = radius_curves_prior
+plot_mass_curves(ax1, ms, curves, lowerbound=0.0, ncurves=None)
+ax1.set_title('Prior')
+ax1.set_xlabel(r'Mass ($M_\odot$)')
+ax1.set_ylabel(r'Radius (km)')
+ax1.set_xlim(0.5, 3.5)
+ax1.set_ylim(8, 18)
 
+curves = radius_curves_post
+ax2.set_title('Posterior')
+plot_mass_curves(ax2, ms, curves, lowerbound=0.0, ncurves=None)
+ax2.set_xlabel(r'Mass ($M_\odot$)')
+ax2.set_ylabel(r'Radius (km)')
+ax2.set_xlim(0.5, 3.5)
+ax2.set_ylim(8, 18)
 
-fig, ax = plt.subplots()
-
-# MR curves
-for i in range(len(radius_curves_prior)):
-    rs = radius_curves_prior[i]
-    mask = rs>0.0
-    ax.plot(ms[mask], rs[mask], c='gray', lw=0.3)
-
-# # True injected value
-# eos_params = np.array([34.384, 3.005, 2.988, 2.851])
-# eos = eos_class_reference(eos_params)
-# mmax = eos.max_mass()
-# ms_injected = np.linspace(0.5, mmax, 100)
-# rs_injected = np.array([eos.radiusofm(m) for m in ms_injected])
-# ax.plot(ms_injected, rs_injected, c='k', lw=2)
-
-ax.minorticks_on()
-ax.set_xlabel(r'Mass ($M_\odot$)')
-ax.set_ylabel(r'Radius (km)')
-ax.set_xlim(0, 3.2)
-ax.set_ylim(8, 18)
-fig.savefig(args.outdir+'/prior_radius_curves.png', format='png', transparent=True, bbox_inches='tight')
-
-fig, ax = plt.subplots()
-
-# MR curves
-for i in range(len(radius_curves_post)):
-    rs = radius_curves_post[i]
-    mask = rs>0.0
-    ax.plot(ms[mask], rs[mask], c='gray', lw=0.3)
-
-# # True injected value
-# eos_params = np.array([34.384, 3.005, 2.988, 2.851])
-# eos = eos_class_reference(eos_params)
-# mmax = eos.max_mass()
-# ms_injected = np.linspace(0.5, mmax, 100)
-# rs_injected = np.array([eos.radiusofm(m) for m in ms_injected])
-# ax.plot(ms_injected, rs_injected, c='k', lw=2)
+fig.savefig(args.outdir+'/radius_curves.png', format='png', transparent=True, bbox_inches='tight')
 
 
-ax.minorticks_on()
-ax.set_xlabel(r'Mass ($M_\odot$)')
-ax.set_ylabel(r'Radius (km)')
-ax.set_xlim(0, 3.2)
-ax.set_ylim(8, 18)
-fig.savefig(args.outdir+'/posterior_radius_curves.png', format='png', transparent=True, bbox_inches='tight')
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 6))
+
+curves = lambda_curves_prior
+plot_mass_curves(ax1, ms, curves, lowerbound=0.0, ncurves=None)
+ax1.set_title('Prior')
+ax1.set_yscale('log')
+ax1.set_xlabel(r'Mass ($M_\odot$)')
+ax1.set_ylabel(r'$\Lambda$')
+ax1.set_xlim(0.5, 3.5)
+ax1.set_ylim(1, 10000)
+
+curves = lambda_curves_post
+plot_mass_curves(ax2, ms, curves, lowerbound=0.0, ncurves=None)
+ax2.set_title('Posterior')
+ax2.set_yscale('log')
+ax2.set_xlabel(r'Mass ($M_\odot$)')
+ax2.set_ylabel(r'$\Lambda$')
+ax2.set_xlim(0.5, 3.5)
+ax2.set_ylim(1, 10000)
+
+fig.savefig(args.outdir+'/lambda_curves.png', format='png', transparent=True, bbox_inches='tight')
 
 
-fig, ax = plt.subplots()
+################################################################################
+# Plot confidence intervals for Radius(Mass) and Lambda(Mass).                 #
+################################################################################
+print('Plotting Radius(Mass) bounds and Lambda(Mass) bounds for prior and posterior.')
 
-# MR curves
-for i in range(len(lambda_curves_prior)):
-    ls = lambda_curves_prior[i]
-    mask = ls>0.0
-    ax.plot(ms[mask], ls[mask], c='gray', lw=0.3)
+def plot_3_bounds_of_mass(ax, bounds):
+    """Plot intervals as a function of mass for 3 different percentiles.
+    """
+    # Largest percentile (should be 100%)
+    ax.plot(bounds[2]['ms'], bounds[2]['lows'],
+            color='k', ls='--', lw=1, zorder=5, label='{}\%'.format(bounds[2]['p']))
+    ax.plot(bounds[2]['ms'], bounds[2]['highs'],
+            color='k', ls='--', lw=1, zorder=1)
 
-# # True injected value
-# eos_params = np.array([34.384, 3.005, 2.988, 2.851])
-# eos = eos_class_reference(eos_params)
-# mmax = eos.max_mass()
-# ms_injected = np.linspace(0.5, mmax, 100)
-# ls_injected = np.array([eos.lambdaofm(m) for m in ms_injected])
-# ax.plot(ms_injected, ls_injected, c='k', lw=2)
+    # Second largest percentile (e.g. 90%)
+    ax.fill_between(bounds[1]['ms'], bounds[1]['lows'], bounds[1]['highs'],
+                    color='g', alpha=0.3, zorder=2, label='{}\%'.format(bounds[1]['p']))
 
-ax.set_yscale('log')
-ax.minorticks_on()
-ax.grid(which='major')
-ax.grid(which='minor', ls=':')
-ax.set_xlabel(r'Mass ($M_\odot$)')
-ax.set_ylabel(r'$\Lambda$')
-ax.set_xlim(0, 3.2)
-ax.set_ylim(1, 10000)
-fig.savefig(args.outdir+'/prior_lambda_curves.png', format='png', transparent=True, bbox_inches='tight')
+    # Smallest percentile (e.g. 50%)
+    ax.fill_between(bounds[0]['ms'], bounds[0]['lows'], bounds[0]['highs'],
+                    color='b', alpha=0.3, zorder=3, label='{}\%'.format(bounds[0]['p']))
 
-
-
-fig, ax = plt.subplots()
-
-# MR curves
-for i in range(len(lambda_curves_post)):
-    ls = lambda_curves_post[i]
-    mask = ls>0.0
-    ax.plot(ms[mask], ls[mask], c='gray', lw=0.3)
-
-# # True injected value
-# eos_params = np.array([34.384, 3.005, 2.988, 2.851])
-# eos = eos_class_reference(eos_params)
-# mmax = eos.max_mass()
-# ms_injected = np.linspace(0.5, mmax, 100)
-# ls_injected = np.array([eos.lambdaofm(m) for m in ms_injected])
-# ax.plot(ms_injected, ls_injected, c='k', lw=2)
-
-ax.set_yscale('log')
-ax.minorticks_on()
-ax.grid(which='major')
-ax.grid(which='minor', ls=':')
-ax.set_xlabel(r'Mass ($M_\odot$)')
-ax.set_ylabel(r'$\Lambda$')
-ax.set_xlim(0, 3.2)
-ax.set_ylim(1, 10000)
-fig.savefig(args.outdir+'/posterior_lambda_curves.png', format='png', transparent=True, bbox_inches='tight')
+    ax.minorticks_on()
+    ax.grid(which='major', zorder=0)
+    ax.grid(which='minor', ls=':', zorder=0)
+    ax.legend(loc='upper right')
 
 
+# Calculate the bounds on radius and Lambda for both prior and posterior
+radius_bounds_prior = postprocess.bounds_from_curves(ms, radius_curves_prior, percentiles=[50, 90, 100])
+radius_bounds_post = postprocess.bounds_from_curves(ms, radius_curves_post, percentiles=[50, 90, 100])
+lambda_bounds_prior = postprocess.bounds_from_curves(ms, lambda_curves_prior, percentiles=[50, 90, 100])
+lambda_bounds_post = postprocess.bounds_from_curves(ms, lambda_curves_post, percentiles=[50, 90, 100])
 
 
-fig, ax = plt.subplots()
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 6))
 
 bounds = radius_bounds_prior
-#ax.fill_between(bounds[:, 0], bounds[:, 1], bounds[:, 2], color='b', alpha=0.1, zorder=2)
-ax.fill_between(bounds[:, 0], bounds[:, 3], bounds[:, 4], color='g', alpha=0.1, zorder=1)
+plot_3_bounds_of_mass(ax1, bounds)
+ax1.set_title('Prior')
+ax1.set_xlabel(r'Mass ($M_\odot$)')
+ax1.set_ylabel(r'Radius (km)')
+ax1.set_xlim(0.5, 3.5)
+ax1.set_ylim(8, 18)
 
 bounds = radius_bounds_post
-ax.fill_between(bounds[:, 0], bounds[:, 1], bounds[:, 2], color='b', alpha=0.3, zorder=2)
-ax.fill_between(bounds[:, 0], bounds[:, 3], bounds[:, 4], color='g', alpha=0.3, zorder=1)
+plot_3_bounds_of_mass(ax2, bounds)
+ax2.set_title('Posterior')
+ax2.set_xlabel(r'Mass ($M_\odot$)')
+ax2.set_ylabel(r'Radius (km)')
+ax2.set_xlim(0.5, 3.5)
+ax2.set_ylim(8, 18)
 
-ax.minorticks_on()
-ax.grid(which='major')
-ax.grid(which='minor', ls=':')
-ax.set_xlabel(r'Mass ($M_\odot$)')
-ax.set_ylabel(r'Radius (km)')
-ax.set_xlim(0.5, 2.5)
-ax.set_ylim(9, 16)
-fig.savefig(args.outdir+'/prior_radius_bounds.png', format='png', transparent=True, bbox_inches='tight')
+fig.savefig(args.outdir+'/radius_bounds.png', format='png', transparent=True, bbox_inches='tight')
 
 
-fig, ax = plt.subplots()
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 6))
 
 bounds = lambda_bounds_prior
-#ax.fill_between(bounds[:, 0], bounds[:, 1], bounds[:, 2], color='b', alpha=0.1, zorder=2)
-ax.fill_between(bounds[:, 0], bounds[:, 3], bounds[:, 4], color='g', alpha=0.1, zorder=1)
+plot_3_bounds_of_mass(ax1, bounds)
+ax1.set_title('Prior')
+ax1.set_yscale('log')
+ax1.set_xlabel(r'Mass ($M_\odot$)')
+ax1.set_ylabel(r'$\Lambda$')
+ax1.set_xlim(0.5, 3.5)
+ax1.set_ylim(1, 10000)
 
 bounds = lambda_bounds_post
-ax.fill_between(bounds[:, 0], bounds[:, 1], bounds[:, 2], color='b', alpha=0.3, zorder=2)
-ax.fill_between(bounds[:, 0], bounds[:, 3], bounds[:, 4], color='g', alpha=0.3, zorder=1)
+plot_3_bounds_of_mass(ax2, bounds)
+ax2.set_title('Posterior')
+ax2.set_yscale('log')
+ax2.set_xlabel(r'Mass ($M_\odot$)')
+ax2.set_ylabel(r'$\Lambda$')
+ax2.set_xlim(0.5, 3.5)
+ax2.set_ylim(1, 10000)
 
-ax.set_yscale('log')
-ax.minorticks_on()
-ax.grid(which='major')
-ax.grid(which='minor', ls=':')
-ax.set_xlabel(r'Mass ($M_\odot$)')
-ax.set_ylabel(r'$\Lambda$')
-ax.set_xlim(0, 3.2)
-ax.set_ylim(1, 10000)
-fig.savefig(args.outdir+'/prior_lambda_bounds.png', format='png', transparent=True, bbox_inches='tight')
+fig.savefig(args.outdir+'/lambda_bounds.png', format='png', transparent=True, bbox_inches='tight')
 
+
+################################################################################
+# Plot R1(m1), R2(m2) credible regions for each BNS system, and                #
+# Plot Lambda1(m1), Lambda2(m2) credible regions for each BNS system.          #
+################################################################################
+
+def plot_single_event_confidence_regions(ax, cd1, cd2, i):
+    c = 'r'
+
+    # Plot NS1
+    util.plot_posterior_with_contours(
+        ax, cd1, cmap=None, levels=[50, 90],
+        linewidths=[2, 2], linestyles=['--', '-'],
+        colors=[c, c], white_contour_back=True)
+
+    # Plot NS2
+    util.plot_posterior_with_contours(
+        ax, cd2, cmap=None, levels=[50, 90],
+        linewidths=[2, 2], linestyles=['--', '-'],
+        colors=[c, c], white_contour_back=True)
+
+    # This is just for making a legend
+    ax.scatter([0], [0], marker='o',
+               s=200, edgecolor=c, linewidth=2, linestyle='--', facecolor='none',
+               label='50\% regions, BNS {}'.format(i))
+    ax.scatter([0], [0], marker='o',
+               s=200, edgecolor=c, linewidth=2, linestyle='-', facecolor='none',
+               label='90\% regions, BNS {}'.format(i))
+
+    ax.minorticks_on()
+    ax.grid(which='major', zorder=0)
+    ax.grid(which='minor', ls=':', zorder=0)
+    ax.legend(loc='upper right', ncol=1, frameon=False)
+
+
+print('Plotting R1(m1), R2(m2) credible regions for each BNS system.')
 
 # Evaluate Mass-Radius contours for each star of each BNS
 radius_cds_list = []
@@ -263,43 +306,8 @@ for i in range(len(single_bns_properties_list)):
     radius_cds_list.append(cds)
 
 
-def plot_single_event_radii(ax, cd1, cd2, i):
-    c = 'r'
-    cd1 = cds['cd1']
-    cd2 = cds['cd2']
-
-    # Plot NS1
-    util.plot_posterior_with_contours(
-        ax, cd1, cmap=None, levels=[50, 90],
-        linewidths=[2, 2], linestyles=['--', '-'],
-        colors=[c, c], white_contour_back=True)
-
-    # Plot NS2
-    util.plot_posterior_with_contours(
-        ax, cd2, cmap=None, levels=[50, 90],
-        linewidths=[2, 2], linestyles=['--', '-'],
-        colors=[c, c], white_contour_back=True)
-
-    # This is just for making a legend
-    ax.scatter([0], [0], marker='o',
-               s=200, edgecolor=c, linewidth=2, linestyle='--', facecolor='none',
-               label='50\% regions, BNS {}'.format(i))
-    ax.scatter([0], [0], marker='o',
-               s=200, edgecolor=c, linewidth=2, linestyle='-', facecolor='none',
-               label='90\% regions, BNS {}'.format(i))
-
-    ax.legend(ncol=2)
-    ax.minorticks_on()
-    ax.grid(which='major')
-    ax.grid(which='minor', ls=':')
-    ax.set_xlabel(r'Mass ($M_\odot$)')
-    ax.set_ylabel(r'Radius (km)')
-    ax.set_xlim(0.5, 2.5)
-    ax.set_ylim(8, 16)
-
-
+bounds = radius_bounds_post
 nbns = len(single_bns_properties_list)
-
 fig, axes = plt.subplots(nbns, 1, figsize=(8, 6*nbns))
 
 for i in range(nbns):
@@ -307,16 +315,22 @@ for i in range(nbns):
         ax = axes
     else:
         ax = axes[i]
-    bounds = radius_bounds_post
-    ax.fill_between(bounds[:, 0], bounds[:, 1], bounds[:, 2], color='b', alpha=0.3, zorder=2, label=r'50\% intervals')
-    ax.fill_between(bounds[:, 0], bounds[:, 3], bounds[:, 4], color='g', alpha=0.3, zorder=1, label=r'90\% intervals')
+
+    plot_3_bounds_of_mass(ax, bounds)
 
     cd1 = radius_cds_list[i]['cd1']
     cd2 = radius_cds_list[i]['cd2']
-    plot_single_event_radii(ax, cd1, cd2, i)
+    plot_single_event_confidence_regions(ax, cd1, cd2, i)
+
+    ax.set_xlabel(r'Mass ($M_\odot$)')
+    ax.set_ylabel(r'Radius (km)')
+    ax.set_xlim(0.5, 2.5)
+    ax.set_ylim(8, 16)
 
 fig.savefig(args.outdir+'/radius_bns.png', format='png', transparent=True, bbox_inches='tight')
 
+
+print('Plotting Lambda1(m1), Lambda2(m2) credible regions for each BNS system.')
 
 lambda_cds_list = []
 for i in range(len(single_bns_properties_list)):
@@ -325,43 +339,8 @@ for i in range(len(single_bns_properties_list)):
     lambda_cds_list.append(cds)
 
 
-def plot_single_event_lambda(ax, cd1, cd2, i):
-    c = 'r'
-    cd1 = cds['cd1']
-    cd2 = cds['cd2']
-
-    # Plot NS1
-    util.plot_posterior_with_contours(
-        ax, cd1, cmap=None, levels=[50, 90],
-        linewidths=[2, 2], linestyles=['--', '-'],
-        colors=[c, c], white_contour_back=True)
-
-    # Plot NS2
-    util.plot_posterior_with_contours(
-        ax, cd2, cmap=None, levels=[50, 90],
-        linewidths=[2, 2], linestyles=['--', '-'],
-        colors=[c, c], white_contour_back=True)
-
-    # This is just for making a legend
-    ax.scatter([0], [0], marker='o',
-               s=200, edgecolor=c, linewidth=2, linestyle='--', facecolor='none',
-               label='50\% regions, BNS {}'.format(i))
-    ax.scatter([0], [0], marker='o',
-               s=200, edgecolor=c, linewidth=2, linestyle='-', facecolor='none',
-               label='90\% regions, BNS {}'.format(i))
-
-    ax.legend(ncol=1)
-    ax.minorticks_on()
-    ax.grid(which='major')
-    ax.grid(which='minor', ls=':')
-    ax.set_xlabel(r'Mass ($M_\odot$)')
-    ax.set_ylabel(r'$\Lambda$')
-    ax.set_xlim(0.5, 2.5)
-    ax.set_ylim(1, 2000)
-
-
+bounds = lambda_bounds_post
 nbns = len(single_bns_properties_list)
-
 fig, axes = plt.subplots(nbns, 1, figsize=(8, 6*nbns))
 
 for i in range(nbns):
@@ -369,16 +348,26 @@ for i in range(nbns):
         ax = axes
     else:
         ax = axes[i]
-    bounds = lambda_bounds_post
-    ax.fill_between(bounds[:, 0], bounds[:, 1], bounds[:, 2], color='b', alpha=0.3, zorder=2, label=r'50\% intervals')
-    ax.fill_between(bounds[:, 0], bounds[:, 3], bounds[:, 4], color='g', alpha=0.3, zorder=1, label=r'90\% intervals')
+
+    plot_3_bounds_of_mass(ax, bounds)
 
     cd1 = lambda_cds_list[i]['cd1']
     cd2 = lambda_cds_list[i]['cd2']
-    plot_single_event_lambda(ax, cd1, cd2, i)
+    plot_single_event_confidence_regions(ax, cd1, cd2, i)
+
+    #ax.set_yscale('log')
+    ax.set_xlabel(r'Mass ($M_\odot$)')
+    ax.set_ylabel(r'$\Lambda$')
+    ax.set_xlim(0.5, 2.5)
+    ax.set_ylim(0, 2000)
 
 fig.savefig(args.outdir+'/lambda_bns.png', format='png', transparent=True, bbox_inches='tight')
 
+
+################################################################################
+# Plot Maximum mass histogram for prior and posterior.                         #
+################################################################################
+print('Plotting Maximum mass histogram for prior and posterior.')
 
 fig, ax = plt.subplots()
 

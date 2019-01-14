@@ -91,6 +91,10 @@ print(f['bns_0'].keys(), f['bns_0'].attrs.keys())
 
 f.close()
 
+print('Number of samples for prior: {}'.format(len(eos_samples_prior)))
+print('Number of samples for posterior: {}'.format(len(eos_samples_post)))
+
+
 ################################################################################
 # EOS parameter corner plots for prior and posterior.                          #
 # Overlap 1d histograms for prior and posterior.                               #
@@ -296,11 +300,12 @@ def plot_single_event_confidence_regions(ax, cd1, cd2, i):
     ax.legend(loc='upper right', ncol=1, frameon=False)
 
 
-print('Plotting R1(m1), R2(m2) credible regions for each BNS system.')
+print('Calculating R1(m1), R2(m2) credible regions for each BNS system:')
 
 # Evaluate Mass-Radius contours for each star of each BNS
 radius_cds_list = []
 for i in range(len(single_bns_properties_list)):
+    print('BNS {} of {}'.format(i, nbns))
     p = single_bns_properties_list[i]
     cds = postprocess.mr_contour_data(p['m1'], p['r1'], p['m2'], p['r2'], gridsize=250)
     radius_cds_list.append(cds)
@@ -330,10 +335,11 @@ for i in range(nbns):
 fig.savefig(args.outdir+'/radius_bns.png', format='png', transparent=True, bbox_inches='tight')
 
 
-print('Plotting Lambda1(m1), Lambda2(m2) credible regions for each BNS system.')
+print('Calculating Lambda1(m1), Lambda2(m2) credible regions for each BNS system:')
 
 lambda_cds_list = []
 for i in range(len(single_bns_properties_list)):
+    print('BNS {} of {}'.format(i, nbns))
     p = single_bns_properties_list[i]
     cds = postprocess.mlambda_contour_data(p['m1'], p['l1'], p['m2'], p['l2'], gridsize=250)
     lambda_cds_list.append(cds)

@@ -62,7 +62,8 @@ def load_emcee_samples(filename):
 # TODO: This is specific to the EOS parameterization. It should go in the specific EOS module.
 def single_initial_walker_params_eospp(
     mc_mean_list, lnp_of_ql_list,
-    q_min=0.5, m_min=0.5, m_max=3.2, mass_known=1.93, vs_limit=1.0):
+    q_min=0.5, m_min=0.5, m_max=3.2,
+    max_mass_min=1.93, max_mass_max=3.2, cs_max=1.0):
     """Sample a point from the prior.
     """
     eos_class_reference = eospp.EOS4ParameterPiecewisePolytropeGammaParams
@@ -89,7 +90,8 @@ def single_initial_walker_params_eospp(
         try:
             lpost = posterior.log_posterior(
                 params, mc_mean_list, eos_class_reference, lnp_of_ql_list,
-                q_min=q_min, m_min=m_min, m_max=m_max, mass_known=mass_known, vs_limit=vs_limit)
+                q_min=q_min, m_min=m_min, m_max=m_max,
+                max_mass_min=max_mass_min, max_mass_max=max_mass_max, cs_max=cs_max)
             if lpost!=posterior.log_zero:
                 print n,
                 return params
@@ -99,14 +101,16 @@ def single_initial_walker_params_eospp(
 
 def initial_walker_params(
     nwalkers, mc_mean_list, lnp_of_ql_list,
-    q_min=0.5, m_min=0.5, m_max=3.2, mass_known=1.93, vs_limit=1.0):
+    q_min=0.5, m_min=0.5, m_max=3.2,
+    max_mass_min=1.93, max_mass_max=3.2, cs_max=1.0):
     """The initial points for the walkers.
     """
     walkers = []
     for i in range(nwalkers):
         p = single_initial_walker_params_eospp(
             mc_mean_list, lnp_of_ql_list,
-            q_min=q_min, m_min=m_min, m_max=m_max, mass_known=mass_known, vs_limit=vs_limit)
+            q_min=q_min, m_min=m_min, m_max=m_max,
+            max_mass_min=max_mass_min, max_mass_max=max_mass_max, cs_max=cs_max)
         walkers.append(p)
 
     return np.array(walkers)

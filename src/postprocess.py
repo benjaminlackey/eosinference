@@ -260,7 +260,8 @@ def bounds_from_curves(ms, curves, percentiles=[50, 90, 100]):
         List of masses the curves are evaluated at.
     curves : 2d-arrays
         Each row is a curve of the quantity x(mass).
-    percentiles : The percentiles you want
+    percentiles : List
+        Percentiles to calculate bounds for.
     """
 
     bounds = []
@@ -285,24 +286,3 @@ def bounds_from_curves(ms, curves, percentiles=[50, 90, 100]):
         d['highs'] = xhighs
         bounds.append(d)
     return bounds
-
-
-# def bounds_from_curves(ms, curves):
-#     """Place upper and lower bounds on a quantity for each mass in ms.
-#
-#     Parameters
-#     ----------
-#     ms : 1d array
-#         List of masses the curves are evaluated at.
-#     curves: 2d-arrays
-#         Each row is a curve of the quantity x(mass).
-#     """
-#     bounds = []
-#     for j in range(len(ms)):
-#         m = ms[j]
-#         xs = curves[:, j]
-#         x50low, x50high = hpd_interval(xs, percentile=50)
-#         x90low, x90high = hpd_interval(xs, percentile=90)
-#         bounds.append([m, x50low, x50high, x90low, x90high])
-#
-#     return np.array(bounds)

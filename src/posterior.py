@@ -28,7 +28,10 @@ def log_mass_prior(mc, q, q_min=0.5, m_min=0.5, m_max=3.2):
         return 0.0
 
 
-def log_prior(mc_list, q_list, eos, q_min=0.5, m_min=0.5, m_max=3.2, mass_known=1.93, vs_limit=1.0):
+def log_prior(
+    mc_list, q_list, eos,
+    q_min=0.5, m_min=0.5, m_max=3.2,
+    max_mass_min=1.93, max_mass_max=3.2, cs_max=1.0):
     """Prior for all binaries and the EOS parameters.
     The checks are sorted from least to most computationally expensive,
     and are only performed if the previous checks have passed.
@@ -47,13 +50,17 @@ def log_prior(mc_list, q_list, eos, q_min=0.5, m_min=0.5, m_max=3.2, mass_known=
     if outside==True:
         return log_zero
 
-    # Check maxmimum mass
-    mmax = eos.max_mass()
-    if mmax <= mass_known:
+    # Check that the calculated maxmimum mass for a given set of EOS samples
+    # is in the range [mass_known, m_max)
+    m_max_calc = eos.max_mass()
+    # Maximum mass should be above observed NS mass
+    if (m_max_calc<=max_mass_min or m_max_calc>=max_mass_max):
         return log_zero
 
-    # Check that the chosen masses in each BNS are < mmax
-    # Note: This requirement causes the q's and EOS parameters to be correlated.
+    # Check that the masses m1, m2 for each BNS are also less than m_max_calc
+    # for the given EOS samples.
+    # Note: This requirement causes the q's and EOS parameters to have some
+    # correlation for the prior.
     for i in range(n_binaries):
         mc = mc_list[i]
         q = q_list[i]
@@ -61,11 +68,12 @@ def log_prior(mc_list, q_list, eos, q_min=0.5, m_min=0.5, m_max=3.2, mass_known=
         eta = util.eta_of_q(q)
         m1 = util.m1_of_mchirp_eta(mc, eta)
         m2 = util.m2_of_mchirp_eta(mc, eta)
-        if (m1 > mmax) or (m2 > mmax):
+        if (m1 > m_max_calc) or (m2 > m_max_calc):
             return log_zero
 
-    # Check speed of sound requirement
-    if eos.max_speed_of_sound() >= vs_limit:
+    # Check speed of sound requirement.
+    # This is expensive, so do it last only if necessary.
+    if eos.max_speed_of_sound() >= cs_max:
         return log_zero
 
     # If you get here, the EOS parameters are allowed by the prior
@@ -74,7 +82,8 @@ def log_prior(mc_list, q_list, eos, q_min=0.5, m_min=0.5, m_max=3.2, mass_known=
 
 def log_prior_emcee_wrapper(
     params, mc_mean_list, eos_class_reference,
-    q_min=0.5, m_min=0.5, m_max=3.2, mass_known=1.93, vs_limit=1.0):
+    q_min=0.5, m_min=0.5, m_max=3.2,
+    max_mass_min=1.93, max_mass_max=3.2, cs_max=1.0):
     """Wrapper for the function log_prior.
     Takes arguments in the form required by emcee.EnsembleSampler()
 
@@ -92,7 +101,7 @@ def log_prior_emcee_wrapper(
     return log_prior(
         mc_mean_list, q_list, eos,
         q_min=q_min, m_min=m_min, m_max=m_max,
-        mass_known=mass_known, vs_limit=vs_limit)
+        max_mass_min=max_mass_min, max_mass_max=max_mass_max, cs_max=cs_max)
 
 
 ################################################################################
@@ -140,7 +149,8 @@ def log_likelihood(mc_mean_list, q_list, eos, lnp_of_ql_list):
 
 def log_posterior(
     params, mc_mean_list, eos_class_reference, lnp_of_ql_list,
-    q_min=0.5, m_min=0.5, m_max=3.2, mass_known=1.93, vs_limit=1.0):
+    q_min=0.5, m_min=0.5, m_max=3.2,
+    max_mass_min=1.93, max_mass_max=3.2, cs_max=1.0):
     """Evaluate the posterior for all the events.
     """
     n_binaries = len(mc_mean_list)
@@ -154,7 +164,7 @@ def log_posterior(
         lprior = log_prior(
             mc_mean_list, q_list, eos,
             q_min=q_min, m_min=m_min, m_max=m_max,
-            mass_known=mass_known, vs_limit=vs_limit)
+            max_mass_min=max_mass_min, max_mass_max=max_mass_max, cs_max=cs_max)
         if lprior==log_zero:
             return log_zero
 

@@ -11,6 +11,7 @@ import corner
 
 import equationofstate as eospp
 import utilities as util
+import runemcee
 import postprocess
 
 matplotlib.rcParams['figure.figsize'] = (9.7082039325, 6.0)
@@ -30,6 +31,8 @@ parser = argparse.ArgumentParser(description="Sample EOS parameters using emcee.
 # Otherwise the parser will call them optional in the help message
 required = parser.add_argument_group('Required named arguments')
 required.add_argument('--infile', required=True, help='hdf5 input file containing the ns_properties')
+required.add_argument('--priorfile', required=True, help='hdf5 output file for prior emcee run.')
+required.add_argument('--posteriorfile', required=True, help='hdf5 output file for posterior emcee run.')
 required.add_argument('--outdir', required=True, help='Output directory for the plots.')
 
 
@@ -39,8 +42,8 @@ print('Arguments from command line: {}'.format(args))
 
 # Copy eos_output_page.html to output directory
 bin_dir = os.path.dirname(os.path.realpath(__file__))
-cwd = os.getcwd()
-os.mkdir(args.outdir)
+#cwd = os.getcwd()
+#os.mkdir(args.outdir)
 cmd = 'cp {}/eos_output_page.html {}/.'.format(bin_dir, args.outdir)
 print(cmd)
 os.system(cmd)
@@ -96,23 +99,47 @@ print('Number of samples for posterior: {}'.format(len(eos_samples_post)))
 
 
 ################################################################################
+# Plot original, uncleaned chains for prior and posterior.                     #
+################################################################################
+print('Plotting original emcee chains of prior and posterior.')
+
+# Load prior
+filename = args.priorfile
+mc_mean_prior, lnprob_prior, samples_prior = runemcee.load_emcee_samples(filename)
+print mc_mean_prior.shape, lnprob_prior.shape, samples_prior.shape
+
+# Load posterior
+filename = args.posteriorfile
+mc_mean_post, lnprob_post, samples_post = runemcee.load_emcee_samples(filename)
+print mc_mean_post.shape, lnprob_post.shape, samples_post.shape
+
+# TODO: EOS labels should not be hardcoded
+# Get parameter labels for plots.
+eoslabels = [r'$\log(p_1)$', r'$\Gamma_1$', r'$\Gamma_2$', r'$\Gamma_3$']
+qlabels = [r'$q_{}$'.format(i) for i in range(nbns)]
+labels = qlabels + eoslabels
+
+fig, axes = postprocess.plot_emcee_chains(lnprob_prior, samples_prior, labels=labels, truths=None)
+fig.savefig(args.outdir+'/prior_chains.png', format='png', transparent=True, bbox_inches='tight')
+
+fig, axes = postprocess.plot_emcee_chains(lnprob_post, samples_post, labels=labels, truths=None)
+fig.savefig(args.outdir+'/posterior_chains.png', format='png', transparent=True, bbox_inches='tight')
+
+################################################################################
 # EOS parameter corner plots for prior and posterior.                          #
 # Overlap 1d histograms for prior and posterior.                               #
 ################################################################################
 print('Making corner plots and histograms of prior and posterior.')
 
-# TODO: This should not be hardcoded
-labels = [r'$\log(p_1)$', r'$\Gamma_1$', r'$\Gamma_2$', r'$\Gamma_3$']
-
-fig = corner.corner(eos_samples_prior, labels=labels, truths=None, plot_density=False, plot_contours=False)
+fig = corner.corner(eos_samples_prior, labels=eoslabels, truths=None, plot_density=False, plot_contours=False)
 fig.savefig(args.outdir+'/prior_eos.png', format='png', transparent=True, bbox_inches='tight')
 
-fig = corner.corner(eos_samples_post, labels=labels, truths=None, plot_density=False, plot_contours=False)
+fig = corner.corner(eos_samples_post, labels=eoslabels, truths=None, plot_density=False, plot_contours=False)
 fig.savefig(args.outdir+'/posterior_eos.png', format='png', transparent=True, bbox_inches='tight')
 
 fig, axes = postprocess.compare_2_runs(
     eos_samples_prior, eos_samples_post,
-    xlabels=labels, truths=None, label1='Prior', label2='Posterior')
+    xlabels=eoslabels, truths=None, label1='Prior', label2='Posterior')
 fig.savefig(args.outdir+'/compare_prior_posterior.png', format='png', transparent=True, bbox_inches='tight')
 
 

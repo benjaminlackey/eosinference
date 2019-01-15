@@ -25,8 +25,17 @@ required.add_argument('--distribution', choices=['prior', 'posterior'], required
 parser.add_argument('--nwalkers', type=int, default=64, help='Number of walkers for emcee.')
 parser.add_argument('--niter', type=int, default=100, help='Number of iterations for emcee.')
 parser.add_argument('--nthin', type=int, default=1, help='Only save every nth step.')
-parser.add_argument('--massknown', type=float, default=1.93, help='Maximum known NS mass (M_sun).')
-parser.add_argument('--vsmax', type=float, default=1.0, help='Maximum allowed speed of sound (c=1 units).')
+parser.add_argument('--maxmassmin', type=float, default=1.93,
+                    help="""Minimum allowed value for the maximum NS mass (M_sun)
+                    calculated for the selected EOS parameters. This should be
+                    above the maximum known mass (1.93).
+                    """)
+parser.add_argument('--maxmassmax', type=float, default=3.2,
+                    help="""Maximum allowed value for the maximum NS mass (M_sun)
+                    calculated for the selected EOS parameters. This should be
+                    less than the causality constraint (3.2).
+                    """)
+parser.add_argument('--csmax', type=float, default=1.0, help='Maximum allowed speed of sound (c=1 units).')
 parser.add_argument('--qmin', type=float, default=0.125, help='Minimum allowed mass ratio (q=m2/m1<=1).')
 parser.add_argument('--mmin', type=float, default=0.5, help='Minimum allowed mass for a NS.')
 parser.add_argument('--mmax', type=float, default=3.2, help='Maximum allowed mass for a NS.')
@@ -48,11 +57,12 @@ print('Generating initial walkers.')
 walkers0 = runemcee.initial_walker_params(
     args.nwalkers, mc_mean_list, lnp_of_ql_list,
     q_min=args.qmin, m_min=args.mmin, m_max=args.mmax,
-    mass_known=args.massknown, vs_limit=args.vsmax)
+    max_mass_min=args.maxmassmin, max_mass_max=args.maxmassmax, cs_max=args.csmax)
 print('Initial walkers shape: {}'.format(walkers0.shape))
 print('Walker 0 has parameters {}'.format(walkers0[0]))
 
 # Data needed for the sampler.
+# TODO: The specific EOS parameterization should not be hardcoded
 dim = len(mc_mean_list) + 4
 eos_class_reference = eospp.EOS4ParameterPiecewisePolytropeGammaParams
 
@@ -61,7 +71,9 @@ if args.distribution == 'prior':
     sampler = emcee.EnsembleSampler(
         args.nwalkers, dim, posterior.log_prior_emcee_wrapper,
         args=[mc_mean_list, eos_class_reference],
-        kwargs={'q_min':args.qmin, 'm_min':args.mmin, 'm_max':args.mmax, 'mass_known':args.massknown, 'vs_limit':args.vsmax},
+        kwargs={
+            'q_min':args.qmin, 'm_min':args.mmin, 'm_max':args.mmax,
+            'max_mass_min':args.maxmassmin, 'max_mass_max':args.maxmassmax, 'cs_max':args.csmax},
         threads=1)
 
     # Do the sampling
@@ -74,7 +86,9 @@ elif args.distribution == 'posterior':
     sampler = emcee.EnsembleSampler(
         args.nwalkers, dim, posterior.log_posterior,
         args=[mc_mean_list, eos_class_reference, lnp_of_ql_list],
-        kwargs={'q_min':args.qmin, 'm_min':args.mmin, 'm_max':args.mmax, 'mass_known':args.massknown, 'vs_limit':args.vsmax},
+        kwargs={
+            'q_min':args.qmin, 'm_min':args.mmin, 'm_max':args.mmax,
+            'max_mass_min':args.maxmassmin, 'max_mass_max':args.maxmassmax, 'cs_max':args.csmax},
         threads=1)
 
     # Do the sampling

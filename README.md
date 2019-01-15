@@ -3,6 +3,9 @@ This package can be used to estimate the equation of state (EOS) of nuclear matt
 
 The methods used here described in this [paper](https://arxiv.org/abs/1410.8866), although I have made some improvements and changes to just take the chirp mass as fixed. The methods were originally inspired by this [paper](https://arxiv.org/abs/1005.0811) on measuring the EOS from neutron-star mass and radius observations.
 
+# Tutorial on using eosinference
+There is a [tutorial](https://github.com/benjaminlackey/eosinference/blob/master/examples/RunEOSInference.ipynb) that describes the input data format for each BNS, setting the priors, and generating an output html page.  
+
 # Custom parameterized EOS model
 You can use your own parameterized EOS by creating a class with the following methods.
 
@@ -10,8 +13,8 @@ You can use your own parameterized EOS by creating a class with the following me
 class YourEOSClass(object):
     def __init__(self, params):
         """Initialize EOS and calculate things necessary for the other methods.
-        Be careful to only calculate things when they are necessary, and store 
-        results for the given set of parameters for later use by other methods.
+        
+        params: 1d-array of EOS parameters.
         """
         self.store_intermediate_results_here
         
@@ -28,16 +31,18 @@ class YourEOSClass(object):
 
     def radiusofm(self, m):
         """Radius in km.
+        m : mass (M_\odot)
         """
         return r
 
     def lambdaofm(self, m):
         """Dimensionless tidal deformability.
+        m : mass (M_\odot)
         """
         return Lambda
 
     def outside_bounds(self):
-        """Boundary for valid EOS parameters.
+        """Use this to define the boundaries of the parameter space.
         """
         if outside:
             return True

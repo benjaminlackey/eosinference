@@ -13,7 +13,8 @@ class YourEOSClass(object):
         Be careful to only calculate things when they are necessary, and store 
         results for the given set of parameters for later use by other methods.
         """
-
+        self.store_intermediate_results_here
+        
     def max_mass(self):
         """Calculate the maximum mass (M_\odot).
         """
@@ -43,5 +44,12 @@ class YourEOSClass(object):
         else:
             return False
 ```
+An EOS object `eos = YourEOSClass(params)` will be instantiated exactly once per iteration of the emcee sampler. If there are expensive intermediate results needed to calculate quantities such as `eos.lambdaofm(m)` or `eos.max_mass()`, or if results are reused for other methods, you should store them in the `eos.__init__(params)` method, so you only have to calculate them once per iteration of the sampler.
 
-
+You will also need a function that finds a reasonable starting parameter for each walker in the emcee chain.
+```python
+def your_eos_class_initial_walker_sample():
+    """Draw a sample of the EOS parameters for initializing an emcee walker.
+    """    
+    returns eos_params
+```

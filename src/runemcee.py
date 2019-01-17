@@ -2,8 +2,7 @@ import numpy as np
 import h5py
 
 import posterior
-import equationofstate as eospp
-
+import equationofstate as e
 
 ################################################################################
 #      Save and load data from emcee run                                       #
@@ -60,13 +59,12 @@ def load_emcee_samples(filename):
 ################################################################################
 
 # TODO: This is specific to the EOS parameterization. It should go in the specific EOS module.
-def single_initial_walker_params_eospp(
-    mc_mean_list, lnp_of_ql_list,
+def single_initial_walker_params(
+    mc_mean_list, lnp_of_ql_list, eosname,
     q_min=0.5, m_min=0.5, m_max=3.2,
     max_mass_min=1.93, max_mass_max=3.2, cs_max=1.0):
-    """Sample a point from the prior.
+    """Sample a point for the initial walker parameters.
     """
-    eos_class_reference = eospp.EOS4ParameterPiecewisePolytropeGammaParams
     n_binaries = len(mc_mean_list)
 
     # the equivalent of a do while loop:
@@ -76,14 +74,11 @@ def single_initial_walker_params_eospp(
 
         # Draw each of the mass ratios
         qs = np.random.uniform(low=q_min, high=1.0, size=n_binaries)
-        # Draw EOS params
-        lp = np.random.uniform(34.3, 34.7)
-        g1 = np.random.uniform(2.5, 3.5)
-        g2 = np.random.uniform(2.5, 3.5)
-        g3 = np.random.uniform(2.5, 3.5)
 
-        # Put the sampled parameters in the right order
-        eos_params = np.array([lp, g1, g2, g3])
+        # Draw EOS params
+        eos_class_reference = e.choose_eos_model(eosname)
+        eos_params = e.initialize_walker_eos_params(eosname)
+
         params = np.concatenate((qs, eos_params))
 
         # Accept the parameters only if the posterior is nonzero
@@ -100,15 +95,15 @@ def single_initial_walker_params_eospp(
 
 
 def initial_walker_params(
-    nwalkers, mc_mean_list, lnp_of_ql_list,
+    nwalkers, mc_mean_list, lnp_of_ql_list, eosname,
     q_min=0.5, m_min=0.5, m_max=3.2,
     max_mass_min=1.93, max_mass_max=3.2, cs_max=1.0):
     """The initial points for the walkers.
     """
     walkers = []
     for i in range(nwalkers):
-        p = single_initial_walker_params_eospp(
-            mc_mean_list, lnp_of_ql_list,
+        p = single_initial_walker_params(
+            mc_mean_list, lnp_of_ql_list, eosname,
             q_min=q_min, m_min=m_min, m_max=m_max,
             max_mass_min=max_mass_min, max_mass_max=max_mass_max, cs_max=cs_max)
         walkers.append(p)

@@ -9,7 +9,7 @@ import numpy as np
 # Sampler
 import emcee
 
-import equationofstate as eospp
+import equationofstate as e
 import pseudolikelihood as like
 import posterior
 import runemcee
@@ -21,6 +21,7 @@ parser = argparse.ArgumentParser(description="Sample EOS parameters using emcee.
 required = parser.add_argument_group('Required named arguments')
 required.add_argument('--infile', required=True, help='hdf5 input file containing the pseudolikelihoods')
 required.add_argument('--outfile', required=True, help='hdf5 output file for emcee results.')
+required.add_argument('--eosname', required=True, help='Name of the EOS model.')
 required.add_argument('--distribution', choices=['prior', 'posterior'], required=True, help='The distribution to sample from.')
 parser.add_argument('--nwalkers', type=int, default=64, help='Number of walkers for emcee.')
 parser.add_argument('--niter', type=int, default=100, help='Number of iterations for emcee.')
@@ -45,6 +46,9 @@ args = parser.parse_args()
 print('Arguments from command line: {}'.format(args))
 print('Results will be saved in {}'.format(args.outfile))
 
+# Choose the eos model
+eos_class_reference = e.choose_eos_model(args.eosname)
+
 # Create the interpolated pseudolikelihood for each BNS event
 mc_mean_list, lnp_of_ql_grid_list = like.load_pseudolikelihood_data(args.infile)
 lnp_of_ql_list = [like.interpolate_lnp_of_ql_from_grid(lnp) for lnp in lnp_of_ql_grid_list]
@@ -55,16 +59,14 @@ print('The chirp masses from the infile are: {}'.format(mc_mean_list))
 # if you're only sampling a prior.
 print('Generating initial walkers.')
 walkers0 = runemcee.initial_walker_params(
-    args.nwalkers, mc_mean_list, lnp_of_ql_list,
+    args.nwalkers, mc_mean_list, lnp_of_ql_list, args.eosname,
     q_min=args.qmin, m_min=args.mmin, m_max=args.mmax,
     max_mass_min=args.maxmassmin, max_mass_max=args.maxmassmax, cs_max=args.csmax)
 print('Initial walkers shape: {}'.format(walkers0.shape))
 print('Walker 0 has parameters {}'.format(walkers0[0]))
 
-# Data needed for the sampler.
-# TODO: The specific EOS parameterization should not be hardcoded
-dim = len(mc_mean_list) + 4
-eos_class_reference = eospp.EOS4ParameterPiecewisePolytropeGammaParams
+# Dimensionality of parameter space.
+dim = walkers0.shape[1]
 
 if args.distribution == 'prior':
     # Initialize the sampler

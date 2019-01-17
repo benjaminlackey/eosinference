@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import h5py
 import corner
 
-import equationofstate as eospp
 import utilities as util
 import runemcee
 import postprocess
@@ -34,7 +33,7 @@ required.add_argument('--infile', required=True, help='hdf5 input file containin
 required.add_argument('--priorfile', required=True, help='hdf5 output file for prior emcee run.')
 required.add_argument('--posteriorfile', required=True, help='hdf5 output file for posterior emcee run.')
 required.add_argument('--outdir', required=True, help='Output directory for the plots.')
-
+required.add_argument('--eoslabels', required=True, nargs='+', help='List of labels for the EOS parameters.')
 
 # Do the argument parsing
 args = parser.parse_args()
@@ -115,7 +114,7 @@ print mc_mean_post.shape, lnprob_post.shape, samples_post.shape
 
 # TODO: EOS labels should not be hardcoded
 # Get parameter labels for plots.
-eoslabels = [r'$\log(p_1)$', r'$\Gamma_1$', r'$\Gamma_2$', r'$\Gamma_3$']
+eoslabels = args.eoslabels
 qlabels = [r'$q_{}$'.format(i) for i in range(nbns)]
 labels = qlabels + eoslabels
 

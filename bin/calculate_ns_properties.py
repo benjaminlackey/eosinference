@@ -8,12 +8,13 @@ import argparse
 import numpy as np
 import h5py
 
-import equationofstate as eospp
+import equationofstate as e
 import runemcee
 import postprocess
 
 parser = argparse.ArgumentParser(description="Calculate the pseudolikelihood for each BNS system.")
 required = parser.add_argument_group('Required named arguments')
+required.add_argument('--eosname', required=True, help='Name of the EOS model.')
 required.add_argument('--priorfile', required=True, help='hdf5 output file for prior emcee run.')
 required.add_argument('--posteriorfile', required=True, help='hdf5 output file for posterior emcee run.')
 required.add_argument('--outfile', required=True, help='hdf5 output file for postprocessed metadata.')
@@ -44,8 +45,8 @@ q_post, eos_post = postprocess.q_eos_samples_from_emcee_samples(
     nburnin=args.nburnin, nthin=args.nthin, nsample=args.nsample, dim_eos=dim_eos)
 
 
-# TODO: This should not be hardcoded
-eos_class_reference = eospp.EOS4ParameterPiecewisePolytropeGammaParams
+# Choose the eos model
+eos_class_reference = e.choose_eos_model(args.eosname)
 
 
 print('Calculating Mmax, R(M) curve, Lambda(M) curve for each EOS sample.')

@@ -251,8 +251,20 @@ def hpd_interval(x, percentile=90):
     return xlow, xhigh
 
 
+def symmetric_interval(x, percentile=90):
+    """Get the symmetric interval with percentile/2 below and above the interval.
+    """
+    half_out = (100.0-percentile)/2.0
+    plow = half_out
+    phigh = 100.0-half_out
+
+    xlow = np.percentile(x, plow)
+    xhigh = np.percentile(x, phigh)
+    return xlow, xhigh
+
+
 def bounds_from_curves(ms, curves, percentiles=[50, 90, 100]):
-    """Place symmetric upper and lower bounds on a quantity for each mass in ms.
+    """Place symmetric lower and upper bounds on a quantity for each mass in ms.
 
     Parameters
     ----------
@@ -262,15 +274,17 @@ def bounds_from_curves(ms, curves, percentiles=[50, 90, 100]):
         Each row is a curve of the quantity x(mass).
     percentiles : List
         Percentiles to calculate bounds for.
+
+    Returns
+    -------
+    bounds : List of dictionaries
+        Each dictionary in the list gives the lower and upper bounds as a
+        function of mass for the given percentile.
     """
 
     bounds = []
     for p in percentiles:
         # Get lower and upper bounds for each symmetric percentile
-        half_out = (100.0-p)/2.0
-        plow = half_out
-        phigh = 100.0-half_out
-
         d = {'p':p, 'ms':ms}
         xlows = []
         xhighs = []
@@ -279,8 +293,9 @@ def bounds_from_curves(ms, curves, percentiles=[50, 90, 100]):
             # the value x(m) for each curve at the mass m
             xs = curves[:, j]
             # lower and upper percentiles at the mass m
-            xlows.append(np.percentile(xs, plow))
-            xhighs.append(np.percentile(xs, phigh))
+            low, high = symmetric_interval(xs, percentile=p)
+            xlows.append(low)
+            xhighs.append(high)
 
         d['lows'] = xlows
         d['highs'] = xhighs

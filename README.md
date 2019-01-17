@@ -42,19 +42,23 @@ class YourEOSClass(object):
         return Lambda
 
     def outside_bounds(self):
-        """Use this to define the boundaries of the parameter space.
+        """Determine if the chosen parameters are inside or outside the 
+        boundaries of the parameter space.
         """
         if outside:
             return True
         else:
             return False
 ```
-An EOS object `eos = YourEOSClass(params)` will be instantiated exactly once per iteration of the emcee sampler. If there are expensive intermediate results needed to calculate quantities such as `eos.lambdaofm(m)` or `eos.max_mass()`, or if results are reused for other methods, you should store them in the `eos.__init__(params)` method, so you only have to calculate them once per iteration of the sampler.
+An EOS object `eos = YourEOSClass(params)` will be instantiated exactly once per iteration of the emcee sampler. If there are expensive intermediate results needed to calculate quantities such as `eos.lambdaofm(m)` or `eos.max_mass()`, or if results are reused for other methods, you should store them in the `eos.__init__(params)` method so you only have to calculate them once per iteration of the sampler.
 
 You will also need a function that finds a reasonable starting parameter for each walker in the emcee chain.
 ```python
 def your_eos_class_initial_walker_sample():
-    """Draw a sample of the EOS parameters for initializing an emcee walker.
+    """Choose EOS parameters for initializing a single emcee walker.
+    This should be sampled from a distribution so each walker has different parameters.
+    
+    params: 1d-array of EOS parameters.
     """    
-    returns eos_params
+    returns params
 ```

@@ -65,9 +65,9 @@ class YourEOSClass(object):
 ```
 An EOS object `eos = YourEOSClass(params)` will be instantiated exactly once for each walker per iteration of the emcee sampler. If there are expensive intermediate results needed to calculate a quantity (such as `eos.max_mass()`, `eos.max_speed_of_sound()`, `eos.lambdaofm(m)`), you should store them in the `eos.__init__(params)` method so you can reuse them for calculating other quantities. This way you will only have to calculate them once for each walker per iteration.
 
-You will also need a function that finds reasonable starting parameters for each walker in the emcee chain. The parameters sould be sampled from a distribution, so that each walker has different parameters.
+You will also need a function that finds reasonable starting parameters for each walker in the emcee chain. The parameters sould be sampled from a distribution so that each walker has different parameters.
 ```python
-def your_eos_class_initial_walker_sample():
+def initialize_walker_your_eos_class():
     """Choose EOS parameters for initializing a single emcee walker.
     
     params: 1d-array of EOS parameters.

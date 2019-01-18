@@ -1,3 +1,7 @@
+"""This module collects the available EOS models and allows one to call the EOS
+model with the string eosname.
+"""
+
 import eospiecewisepolytrope
 
 # Supported EOS models

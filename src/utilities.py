@@ -1,3 +1,6 @@
+"""Common utility functions for BNS parameters and plotting.
+"""
+
 import numpy as np
 import pandas as pd
 

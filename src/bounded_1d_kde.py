@@ -1,7 +1,3 @@
-#!/opt/local/bin/python
-
-####!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 A bounded 1-D KDE class for all of your bounded 1-D KDE needs.
 """

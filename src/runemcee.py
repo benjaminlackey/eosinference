@@ -1,7 +1,12 @@
+"""Utility functions for running inference with the emcee sampler. Methods are
+provided to save and load emcee samples, and to generate initial guesses for the
+emcee walkers.
+"""
+
 import numpy as np
 import h5py
 
-import posterior
+import distributions
 import equationofstate as e
 
 ################################################################################
@@ -61,7 +66,8 @@ def load_emcee_samples(filename):
 # TODO: This is specific to the EOS parameterization. It should go in the specific EOS module.
 def single_initial_walker_params(
     mc_mean_list, lnp_of_ql_list, eosname,
-    q_min=0.5, m_min=0.5, m_max=3.2,
+    q_min=0.5, lambdat_max=10000,
+    m_min=0.5, m_max=3.2,
     max_mass_min=1.93, max_mass_max=3.2, cs_max=1.0):
     """Sample a point for the initial walker parameters.
     """
@@ -83,11 +89,12 @@ def single_initial_walker_params(
 
         # Accept the parameters only if the posterior is nonzero
         try:
-            lpost = posterior.log_posterior(
+            lpost = distributions.log_posterior(
                 params, mc_mean_list, eos_class_reference, lnp_of_ql_list,
-                q_min=q_min, m_min=m_min, m_max=m_max,
+                q_min=q_min, lambdat_max=lambdat_max,
+                m_min=m_min, m_max=m_max,
                 max_mass_min=max_mass_min, max_mass_max=max_mass_max, cs_max=cs_max)
-            if lpost!=posterior.log_zero:
+            if lpost!=distributions.log_zero:
                 print n,
                 return params
         except RuntimeError:
@@ -96,7 +103,8 @@ def single_initial_walker_params(
 
 def initial_walker_params(
     nwalkers, mc_mean_list, lnp_of_ql_list, eosname,
-    q_min=0.5, m_min=0.5, m_max=3.2,
+    q_min=0.5, lambdat_max=10000,
+    m_min=0.5, m_max=3.2,
     max_mass_min=1.93, max_mass_max=3.2, cs_max=1.0):
     """The initial points for the walkers.
     """
@@ -104,7 +112,7 @@ def initial_walker_params(
     for i in range(nwalkers):
         p = single_initial_walker_params(
             mc_mean_list, lnp_of_ql_list, eosname,
-            q_min=q_min, m_min=m_min, m_max=m_max,
+            q_min=q_min, lambdat_max=lambdat_max, m_min=m_min, m_max=m_max,
             max_mass_min=max_mass_min, max_mass_max=max_mass_max, cs_max=cs_max)
         walkers.append(p)
 

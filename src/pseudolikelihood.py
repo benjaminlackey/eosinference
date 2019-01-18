@@ -1,3 +1,10 @@
+"""This module provides methods to construct a function that approximates the
+pseudolikelihood ln[p(q, lambdat)] from the MCMC samples for a BNS event. The
+density is estimated with a 2d bounded KDE. For fast evaluation, it is then
+gridded up and interpolated. Functions are provided to save and load the gridded
+data.
+"""
+
 import h5py
 import pandas as pd
 
@@ -12,10 +19,9 @@ import bounded_2d_kde
 # Functions for converting (q, lambdat) samples to a function ln(p(q, lambdat))#
 ################################################################################
 
-def construct_p_of_ql_bounded_kde(qs, lambdats, kde_bound_limits, bw_method=None, log=False):
+def construct_p_of_ql_bounded_kde(qs, lambdats, kde_bound_limits, bw_method=None):
     """Construct a function that approximates the pseudolikelihood
-    ln[p(q, lambdat)] from the MCMC samples for a BNS event using
-    a 2d bounded KDE.
+    p(q, lambdat) from the MCMC samples for a BNS event using a bounded 2d KDE.
 
     Parameters
     ----------
@@ -25,7 +31,7 @@ def construct_p_of_ql_bounded_kde(qs, lambdats, kde_bound_limits, bw_method=None
 
     Returns
     -------
-    lnp_of_ql_kde : function(q, lambdat)
+    p_of_ql : function(q, lambdat)
     """
     # Initialize KDE
     data = np.array([qs, lambdats]).T
@@ -37,46 +43,66 @@ def construct_p_of_ql_bounded_kde(qs, lambdats, kde_bound_limits, bw_method=None
 
     # Return a function that takes 2 arguments instead of a
     # function that takes the array [q, lambdat]
-    def pseudolike(q, lambdat, log=False):
-        if log==False:
-            return kde.evaluate(np.array([q, lambdat]))[0]
-        else:
-            # TODO: This method doesn't work yet
-            return kde.logpdf(np.array([q, lambdat]))[0]
+    def p_of_ql(q, lambdat):
+        return kde.evaluate(np.array([q, lambdat]))[0]
 
-    return pseudolike
+    return p_of_ql
 
 
-def construct_p_of_ql_gaussian(qs, lambdats):
-    """Construct a function that approximates the pseudolikelihood
-    ln(p(q, lambdat)) as a mutivariate Gaussian using the
-    MCMC samples for a BNS event. This is done to extend the KDE
-    far from the region where there are no MCMC samples and the KDE
-    suffers from underflow
+def construct_lnp_of_ql_gaussian_kde(qs, lambdats, bw_method=None):
+    """Construct a function that approximates the ln[pseudolikelihood]
+    ln[p(q, lambdat)] from the MCMC samples for a BNS event using a Gaussian KDE.
 
     Parameters
     ----------
-    qs : array of q MCMC samples
-    lambdats : array of lambdat MCMC samples
+    qs : 1d array of q MCMC samples
+    lambdats : 1d array of lambdat MCMC samples
 
     Returns
     -------
-    lnp_of_ql_gaussian : function(q, lambdat)
+    lnp_of_ql : function(q, lambdat)
     """
-    data = np.array([qs, lambdats])
-    mu = np.mean(data, axis=1)
-    sigma = np.cov(data)
-    distribution = stats.multivariate_normal(mean=mu, cov=sigma)
+    # Initialize KDE
+    kde = stats.gaussian_kde(np.array([qs, lambdats]), bw_method=bw_method)
 
     # Return a function that takes 2 arguments instead of a
     # function that takes the array [q, lambdat]
-    def pseudolike(q, lambdat, log=False):
-        if log==False:
-            return distribution.pdf(np.array([q, lambdat]))
-        else:
-            return distribution.logpdf(np.array([q, lambdat]))
+    def lnp_of_ql(q, lambdat):
+            return kde.logpdf(np.array([q, lambdat]))[0]
 
-    return pseudolike
+    return lnp_of_ql
+
+
+# def construct_p_of_ql_gaussian(qs, lambdats):
+#     """Construct a function that approximates the pseudolikelihood
+#     ln(p(q, lambdat)) as a mutivariate Gaussian using the
+#     MCMC samples for a BNS event. This is done to extend the KDE
+#     far from the region where there are no MCMC samples and the KDE
+#     suffers from underflow
+#
+#     Parameters
+#     ----------
+#     qs : array of q MCMC samples
+#     lambdats : array of lambdat MCMC samples
+#
+#     Returns
+#     -------
+#     lnp_of_ql_gaussian : function(q, lambdat)
+#     """
+#     data = np.array([qs, lambdats])
+#     mu = np.mean(data, axis=1)
+#     sigma = np.cov(data)
+#     distribution = stats.multivariate_normal(mean=mu, cov=sigma)
+#
+#     # Return a function that takes 2 arguments instead of a
+#     # function that takes the array [q, lambdat]
+#     def pseudolike(q, lambdat, log=False):
+#         if log==False:
+#             return distribution.pdf(np.array([q, lambdat]))
+#         else:
+#             return distribution.logpdf(np.array([q, lambdat]))
+#
+#     return pseudolike
 
 
 ################################################################################
@@ -85,8 +111,9 @@ def construct_p_of_ql_gaussian(qs, lambdats):
 
 def construct_lnp_of_ql_grid(qs, lambdats, kde_bound_limits, grid_limits,
                              gridsize=500, bw_method=None):
-    """Grid up the KDE approximation of ln(p(q, lambdat)). If the KDE
-    suffers from underflow, then use the Gaussian approximation instead.
+    """Grid up the KDE approximation of ln(p(q, lambdat)). If the bounded KDE
+    suffers from underflow, then use the Gaussian KDE instead which has as
+    logpdf method that is well behaved.
 
     Parameters
     ----------
@@ -96,8 +123,8 @@ def construct_lnp_of_ql_grid(qs, lambdats, kde_bound_limits, grid_limits,
     gridsize : Number of points to sample in the q and lambdat directions.
     """
     # Construct the approximations for the pseudolikelihood
-    p_of_ql_kde = construct_p_of_ql_bounded_kde(qs, lambdats, kde_bound_limits, bw_method=bw_method)
-    p_of_ql_gaussian = construct_p_of_ql_gaussian(qs, lambdats)
+    p_of_ql_bounded_kde = construct_p_of_ql_bounded_kde(qs, lambdats, kde_bound_limits, bw_method=bw_method)
+    lnp_of_ql_gaussian_kde = construct_lnp_of_ql_gaussian_kde(qs, lambdats, bw_method=bw_method)
 
     # Make a list of [x, y] coordinates for the grid
     q_grid = np.linspace(grid_limits[0], grid_limits[1], gridsize)
@@ -112,10 +139,10 @@ def construct_lnp_of_ql_grid(qs, lambdats, kde_bound_limits, grid_limits,
         for j in range(len(l_grid)):
             q = lnp_grid[i, j, 0]
             l = lnp_grid[i, j, 1]
-            p = p_of_ql_kde(q, l)
+            p = p_of_ql_bounded_kde(q, l)
             if p<1.0e-300:
                 # Rough threshold for when np.log(p) returns -inf
-                lnp = p_of_ql_gaussian(q, l, log=True)
+                lnp = lnp_of_ql_gaussian_kde(q, l)
             else:
                 lnp = np.log(p)
             lnp_grid[i, j, 2] = lnp
@@ -133,7 +160,7 @@ def construct_lnp_of_ql_grid(qs, lambdats, kde_bound_limits, grid_limits,
 #     kde_bound_limits : [qlow, qhigh, lambdatlow, lambdathigh]
 #     gridsize : Number of points to sample in the q and lambdat directions.
 #     """
-#     # Construct the approximates for the pseudolikelihood
+#     # Construct the approximations for the pseudolikelihood
 #     p_of_ql_kde = construct_p_of_ql_bounded_kde(qs, lambdats, kde_bound_limits, bw_method=bw_method)
 #     p_of_ql_gaussian = construct_p_of_ql_gaussian(qs, lambdats)
 #
@@ -141,53 +168,23 @@ def construct_lnp_of_ql_grid(qs, lambdats, kde_bound_limits, grid_limits,
 #     q_grid = np.linspace(grid_limits[0], grid_limits[1], gridsize)
 #     l_grid = np.linspace(grid_limits[2], grid_limits[3], gridsize)
 #
-#     lnp_grid = np.array([[[q, l, p_of_ql_gaussian(q, l, log=True)] for l in l_grid] for q in q_grid])
-#     lnp_max = np.max(lnp_grid[:, :, 2])
+#     # Allocate memory
+#     lnp_grid = np.array([[[q, l, 0.0] for l in l_grid] for q in q_grid])
+#
+#     # Fill the lnp value with the KDE approximation.
+#     # If there is underflow, use the Gaussian approximation instead.
 #     for i in range(len(q_grid)):
 #         for j in range(len(l_grid)):
-#             lnp = lnp_grid[i, j, 2]
-#             # Replace with KDE if less than 20 e-folds from max value
-#             if lnp > lnp_max-40.0:
-#                 q = lnp_grid[i, j, 0]
-#                 l = lnp_grid[i, j, 1]
-#                 lnp_grid[i, j, 2] = np.log(p_of_ql_kde(q, l))
+#             q = lnp_grid[i, j, 0]
+#             l = lnp_grid[i, j, 1]
+#             p = p_of_ql_kde(q, l)
+#             if p<1.0e-300:
+#                 # Rough threshold for when np.log(p) returns -inf
+#                 lnp = p_of_ql_gaussian(q, l, log=True)
+#             else:
+#                 lnp = np.log(p)
+#             lnp_grid[i, j, 2] = lnp
 #     return lnp_grid
-
-
-# def pseudolikelihood_data_from_pe_samples(
-#     filename,
-#     kde_bound_limits=[0.5, 1.0, 0.0, 5000.0],
-#     grid_limits=[0.5, 1.0, 0.0, 5000.0],
-#     gridsize=250):
-#     """Open a CSV data file for a BNS MCMC run and evaluate
-#     ln(pseudolikelihood(q, lambdat)) on a grid.
-#
-#     Parameters
-#     ----------
-#     filename : CSV file
-#         MCMC samples with column headers named ['mc', 'q', 'lambdat']
-#
-#     Returns
-#     -------
-#     mc_mean : mean value of chirp mass
-#     lnp_of_ql_grid : 3d array
-#         [q, lambdat, lnp] for each value of q and lambdat
-#     """
-#     # Open csv file as pandas data frame
-#     df = pd.read_csv(filename)
-#
-#     # Get chirp mass mean
-#     mc_mean = df['mc'].mean()
-#
-#     # Construct grid that describes lnp(q, lambdat)
-#     qs = df['q'].values
-#     lambdats = df['lambdat'].values
-#
-#     lnp_of_ql_grid = construct_lnp_of_ql_grid(
-#         qs, lambdats, kde_bound_limits, grid_limits,
-#         gridsize=gridsize, bw_method=None)
-#
-#     return mc_mean, lnp_of_ql_grid
 
 
 ################################################################################

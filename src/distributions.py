@@ -1,3 +1,8 @@
+"""This module defines the ln(prior), ln(likelihood), and ln(posterior) for a
+set of BNS observations. The parameters are the mass ratio of each BNS and the
+EOS parameters: params = np.array([q0, q1, ..., qn-1, eos0, eos1, ..., eosn-1]).
+"""
+
 import sys
 import numpy as np
 import utilities as util
@@ -30,7 +35,8 @@ def log_mass_prior(mc, q, q_min=0.5, m_min=0.5, m_max=3.2):
 
 def log_prior(
     mc_list, q_list, eos,
-    q_min=0.5, m_min=0.5, m_max=3.2,
+    q_min=0.5, lambdat_max=10000,
+    m_min=0.5, m_max=3.2,
     max_mass_min=1.93, max_mass_max=3.2, cs_max=1.0):
     """Prior for all binaries and the EOS parameters.
     The checks are sorted from least to most computationally expensive,
@@ -57,14 +63,11 @@ def log_prior(
     if (m_max_calc<=max_mass_min or m_max_calc>=max_mass_max):
         return log_zero
 
-    # Check that the masses m1, m2 for each BNS are also less than m_max_calc
-    # for the given EOS samples.
-    # Note: This requirement causes the q's and EOS parameters to have some
-    # correlation for the prior.
+    # For each BNS system, check that the masses m1, m2 are also less than m_max_calc.
     for i in range(n_binaries):
+
         mc = mc_list[i]
         q = q_list[i]
-        # Get individual masses (with m1>=m2)
         eta = util.eta_of_q(q)
         m1 = util.m1_of_mchirp_eta(mc, eta)
         m2 = util.m2_of_mchirp_eta(mc, eta)
@@ -76,13 +79,29 @@ def log_prior(
     if eos.max_speed_of_sound() >= cs_max:
         return log_zero
 
+    # For each BNS system, check that the value of lambdat is less than lambdat_max.
+    # This is done so you do not go beyond the boundary of the interpolated likelihood.
+    # This is done last so you don't have to calculate Lambda for weird EOS parameter values.
+    for i in range(n_binaries):
+        mc = mc_list[i]
+        q = q_list[i]
+        eta = util.eta_of_q(q)
+        m1 = util.m1_of_mchirp_eta(mc, eta)
+        m2 = util.m2_of_mchirp_eta(mc, eta)
+        lambda1 = eos.lambdaofm(m1)
+        lambda2 = eos.lambdaofm(m2)
+        lambdat = util.lamtilde_of_eta_lam1_lam2(eta, lambda1, lambda2)
+        if lambdat > lambdat_max:
+            return log_zero
+
     # If you get here, the EOS parameters are allowed by the prior
     return 0.0
 
 
 def log_prior_emcee_wrapper(
     params, mc_mean_list, eos_class_reference,
-    q_min=0.5, m_min=0.5, m_max=3.2,
+    q_min=0.5, lambdat_max=10000,
+    m_min=0.5, m_max=3.2,
     max_mass_min=1.93, max_mass_max=3.2, cs_max=1.0):
     """Wrapper for the function log_prior.
     Takes arguments in the form required by emcee.EnsembleSampler()
@@ -98,11 +117,18 @@ def log_prior_emcee_wrapper(
     q_list = params[:n_binaries]
     eos_params = params[n_binaries:]
     eos = eos_class_reference(eos_params)
-    return log_prior(
-        mc_mean_list, q_list, eos,
-        q_min=q_min, m_min=m_min, m_max=m_max,
-        max_mass_min=max_mass_min, max_mass_max=max_mass_max, cs_max=cs_max)
 
+    try:
+        return log_prior(
+            mc_mean_list, q_list, eos,
+            q_min=q_min, lambdat_max=lambdat_max,
+            m_min=m_min, m_max=m_max,
+            max_mass_min=max_mass_min, max_mass_max=max_mass_max, cs_max=cs_max)
+
+    except Exception as e:
+        print(params)
+        print(e)
+        return log_zero
 
 ################################################################################
 # Construct the ln(likelihood) from all BNS observations.                      #
@@ -149,7 +175,8 @@ def log_likelihood(mc_mean_list, q_list, eos, lnp_of_ql_list):
 
 def log_posterior(
     params, mc_mean_list, eos_class_reference, lnp_of_ql_list,
-    q_min=0.5, m_min=0.5, m_max=3.2,
+    q_min=0.5, lambdat_max=10000,
+    m_min=0.5, m_max=3.2,
     max_mass_min=1.93, max_mass_max=3.2, cs_max=1.0):
     """Evaluate the posterior for all the events.
     """
@@ -163,7 +190,8 @@ def log_posterior(
         # Currently the ln(prior) is either log_zero or 0.
         lprior = log_prior(
             mc_mean_list, q_list, eos,
-            q_min=q_min, m_min=m_min, m_max=m_max,
+            q_min=q_min, lambdat_max=lambdat_max,
+            m_min=m_min, m_max=m_max,
             max_mass_min=max_mass_min, max_mass_max=max_mass_max, cs_max=cs_max)
         if lprior==log_zero:
             return log_zero
@@ -174,6 +202,7 @@ def log_posterior(
         # If you get here lprior should be 0, so lpost = llike
         return llike
 
-    except RuntimeError:
-        print('LAL had a RuntimeError')
+    except Exception as e:
+        print(params)
+        print(e)
         return log_zero

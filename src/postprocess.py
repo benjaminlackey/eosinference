@@ -1,3 +1,9 @@
+"""Methods for taking emcee samples and calculating NS properties:
+ * Lambda(mass), radius(mass) curve for each EOS sample
+ * confidence regions for Lambda(mass), radius(mass)
+ * masses, tidal parameters, radii for each NS in each BNS and confidence regions.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -149,8 +155,10 @@ def ns_properties_from_eos_samples(eos_samples, eos_class_reference, ms):
             lambda_samples.append(ls)
             mmax_samples.append(mmax)
             eos_valid_samples.append(eos_params)
-        except RuntimeError:
-            print 'LAL had a RuntimeError. Not adding point to samples.'
+        except Exception as e:
+            print(eos_params)
+            print(e)
+            print('Not adding sample to list of R(M), Lambda(M) curves.')
 
     return {'mass':ms,
             'radius':np.array(radius_samples),
@@ -181,8 +189,10 @@ def single_event_ns_properties_from_samples(mc_mean, q_samples, eos_samples, eos
             l2 = eos.lambdaofm(m2)
             lambdat = util.lamtilde_of_eta_lam1_lam2(eta, l1, l2)
             ns_properties.append([m1, m2, r1, r2, l1, l2, q, lambdat])
-        except RuntimeError:
-            print 'LAL had a RuntimeError. Not adding point to samples.'
+        except Exception as e:
+            print(m1, m2, eos_params)
+            print(e)
+            print('Not adding sample to list.')
 
     p = np.array(ns_properties)
     return {'m1':p[:, 0], 'm2':p[:, 1],

@@ -1,3 +1,6 @@
+"""Definition of the 4-parameter piecewise polytrope EOS model.
+"""
+
 import numpy as np
 
 # Matplotlib things

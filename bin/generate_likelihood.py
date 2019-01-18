@@ -11,16 +11,16 @@ import pseudolikelihood as like
 
 def pseudolikelihood_data_from_pe_samples(
     filename,
-    kde_bound_limits=[0.5, 1.0, 0.0, 5000.0],
-    grid_limits=[0.5, 1.0, 0.0, 5000.0],
-    gridsize=250):
+    kde_bound_limits=[0.5, 1.0, 0.0, 10000.0],
+    grid_limits=[0.5, 1.0, 0.0, 10000.0],
+    gridsize=500):
     """Open a CSV data file for a BNS MCMC run and evaluate
     ln(pseudolikelihood(q, lambdat)) on a grid.
 
     Parameters
     ----------
     filename : CSV file
-        MCMC samples with column headers named ['mc', 'q', 'lambdat']
+        MCMC samples with column headers named ['mc', 'q', 'lam_tilde']
 
     Returns
     -------
@@ -28,18 +28,36 @@ def pseudolikelihood_data_from_pe_samples(
     lnp_of_ql_grid : 3d array
         [q, lambdat, lnp] for each value of q and lambdat
     """
-    # Open csv file as pandas data frame
+    # Open csv file as pandas DataFrame
     df = pd.read_csv(filename)
     # Get chirp mass mean
     mc_mean = df['mc'].mean()
     qs = df['q'].values
     lambdats = df['lam_tilde'].values
 
-    # Check that the KDE bound limits are appropriate
+    # Check that the KDE bound limits are appropriate.
+    # The bounded KDE returns garbage if there are samples beyond the bounds.
     qlow, qhigh, lambdatlow, lambdathigh = kde_bound_limits
     if (qs.min()<qlow or qs.max()>qhigh or
         lambdats.min()<lambdatlow or lambdats.max()>lambdathigh):
         raise ValueError('There are MCMC samples beyond the boundaries of kde_bound_limits.')
+
+    # Check number of grid points per standard deviation.
+    # There should be enough samples to accurately interpolate.
+    sigma_q = np.std(qs)
+    sigma_l = np.std(lambdats)
+    qlow, qhigh, lambdatlow, lambdathigh = grid_limits
+    q_grid = np.linspace(qlow, qhigh, gridsize)
+    l_grid = np.linspace(lambdatlow, lambdathigh, gridsize)
+    dq = q_grid[1] - q_grid[0]
+    dl = l_grid[1] - l_grid[0]
+    points_per_sigma_q = sigma_q/dq
+    points_per_sigma_l = sigma_l/dl
+    print('q: std {}, grid spacing {}, points per std {}'.format(sigma_q, dq, points_per_sigma_q))
+    print('lambdat: std {}, grid spacing {}, points per std {}'.format(sigma_l, dl, points_per_sigma_l))
+    spacing_min = 2.0
+    if points_per_sigma_q<spacing_min or points_per_sigma_l<spacing_min:
+        raise ValueError('There should be >{} grid points per standard deviation.'.format(spacing_min))
 
     # Construct grid that describes lnp(q, lambdat)
     lnp_of_ql_grid = like.construct_lnp_of_ql_grid(
@@ -60,7 +78,7 @@ required.add_argument(
 required.add_argument('--outfile', required=True, help='hdf5 output file for pseudolikelihoods.')
 parser.add_argument('--qmin', type=float, default=0.5, help='Minimum mass ratio.')
 parser.add_argument('--lambdatmax', type=float, default=10000, help='Maximum tildeLambda.')
-parser.add_argument('--gridsize', type=int, default=250, help='Grid points for q and tildeLambda.')
+parser.add_argument('--gridsize', type=int, default=500, help='Grid points for q and tildeLambda.')
 
 # Do the argument parsing
 args = parser.parse_args()

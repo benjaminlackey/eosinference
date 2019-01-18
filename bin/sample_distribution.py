@@ -11,7 +11,7 @@ import emcee
 
 import equationofstate as e
 import pseudolikelihood as like
-import posterior
+import distributions
 import runemcee
 
 
@@ -26,20 +26,21 @@ required.add_argument('--distribution', choices=['prior', 'posterior'], required
 parser.add_argument('--nwalkers', type=int, default=64, help='Number of walkers for emcee.')
 parser.add_argument('--niter', type=int, default=100, help='Number of iterations for emcee.')
 parser.add_argument('--nthin', type=int, default=1, help='Only save every nth step.')
+parser.add_argument('--qmin', type=float, default=0.125, help='Minimum allowed mass ratio (q=m2/m1<=1).')
+parser.add_argument('--lambdatmax', type=float, default=0.125, help='Maxmimum allowed combined tidal parameter tildeLambda.')
+parser.add_argument('--mmin', type=float, default=0.5, help='Minimum allowed mass for each NS in the BNS.')
+parser.add_argument('--mmax', type=float, default=3.2, help='Maximum allowed mass for each NS in the BNS.')
 parser.add_argument('--maxmassmin', type=float, default=1.93,
                     help="""Minimum allowed value for the maximum NS mass (M_sun)
                     calculated for the selected EOS parameters. This should be
-                    above the maximum known mass (1.93).
+                    above 1.93 because there is a pulsar with this mass.
                     """)
 parser.add_argument('--maxmassmax', type=float, default=3.2,
                     help="""Maximum allowed value for the maximum NS mass (M_sun)
                     calculated for the selected EOS parameters. This should be
-                    less than the causality constraint (3.2).
+                    less than the causality constraint (~3.2).
                     """)
 parser.add_argument('--csmax', type=float, default=1.0, help='Maximum allowed speed of sound (c=1 units).')
-parser.add_argument('--qmin', type=float, default=0.125, help='Minimum allowed mass ratio (q=m2/m1<=1).')
-parser.add_argument('--mmin', type=float, default=0.5, help='Minimum allowed mass for a NS.')
-parser.add_argument('--mmax', type=float, default=3.2, help='Maximum allowed mass for a NS.')
 
 # Do the argument parsing
 args = parser.parse_args()
@@ -60,7 +61,7 @@ print('The chirp masses from the infile are: {}'.format(mc_mean_list))
 print('Generating initial walkers.')
 walkers0 = runemcee.initial_walker_params(
     args.nwalkers, mc_mean_list, lnp_of_ql_list, args.eosname,
-    q_min=args.qmin, m_min=args.mmin, m_max=args.mmax,
+    q_min=args.qmin, lambdat_max=args.lambdatmax, m_min=args.mmin, m_max=args.mmax,
     max_mass_min=args.maxmassmin, max_mass_max=args.maxmassmax, cs_max=args.csmax)
 print('Initial walkers shape: {}'.format(walkers0.shape))
 print('Walker 0 has parameters {}'.format(walkers0[0]))
@@ -71,10 +72,11 @@ dim = walkers0.shape[1]
 if args.distribution == 'prior':
     # Initialize the sampler
     sampler = emcee.EnsembleSampler(
-        args.nwalkers, dim, posterior.log_prior_emcee_wrapper,
+        args.nwalkers, dim, distributions.log_prior_emcee_wrapper,
         args=[mc_mean_list, eos_class_reference],
         kwargs={
-            'q_min':args.qmin, 'm_min':args.mmin, 'm_max':args.mmax,
+            'q_min':args.qmin, 'lambdat_max':args.lambdatmax,
+            'm_min':args.mmin, 'm_max':args.mmax,
             'max_mass_min':args.maxmassmin, 'max_mass_max':args.maxmassmax, 'cs_max':args.csmax},
         threads=1)
 
@@ -86,10 +88,11 @@ if args.distribution == 'prior':
 elif args.distribution == 'posterior':
     # Initialize the sampler.
     sampler = emcee.EnsembleSampler(
-        args.nwalkers, dim, posterior.log_posterior,
+        args.nwalkers, dim, distributions.log_posterior,
         args=[mc_mean_list, eos_class_reference, lnp_of_ql_list],
         kwargs={
-            'q_min':args.qmin, 'm_min':args.mmin, 'm_max':args.mmax,
+            'q_min':args.qmin, 'lambdat_max':args.lambdatmax,
+            'm_min':args.mmin, 'm_max':args.mmax,
             'max_mass_min':args.maxmassmin, 'max_mass_max':args.maxmassmax, 'cs_max':args.csmax},
         threads=1)
 

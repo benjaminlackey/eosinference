@@ -29,16 +29,19 @@ def pseudolikelihood_data_from_pe_samples(
         [q, lambdat, lnp] for each value of q and lambdat
     """
     # Open csv file as pandas data frame
-    #df = pd.read_csv(filename, sep='\s+')
     df = pd.read_csv(filename)
-
     # Get chirp mass mean
     mc_mean = df['mc'].mean()
-
-    # Construct grid that describes lnp(q, lambdat)
     qs = df['q'].values
     lambdats = df['lam_tilde'].values
 
+    # Check that the KDE bound limits are appropriate
+    qlow, qhigh, lambdatlow, lambdathigh = kde_bound_limits
+    if (qs.min()<qlow or qs.max()>qhigh or
+        lambdats.min()<lambdatlow or lambdats.max()>lambdathigh):
+        raise ValueError('There are MCMC samples beyond the boundaries of kde_bound_limits.')
+
+    # Construct grid that describes lnp(q, lambdat)
     lnp_of_ql_grid = like.construct_lnp_of_ql_grid(
         qs, lambdats, kde_bound_limits, grid_limits,
         gridsize=gridsize, bw_method=None)

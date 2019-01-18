@@ -19,7 +19,7 @@ def choose_eos_model(eosname):
         raise ValueError('EOS model name not valid.')
 
 def initialize_walker_eos_params(eosname):
-    """Get the class reference for an EOS model.
+    """Find an initial point for the EOS parameters for an emcee walker.
     """
     if eosname in initializers.keys():
         return initializers[eosname]()

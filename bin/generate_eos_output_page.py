@@ -12,6 +12,7 @@ import corner
 import utilities as util
 import runemcee
 import postprocess
+import equationofstate as e
 
 matplotlib.rcParams['figure.figsize'] = (9.7082039325, 6.0)
 matplotlib.rcParams['xtick.labelsize'] = 20.0
@@ -33,7 +34,10 @@ required.add_argument('--infile', required=True, help='hdf5 input file containin
 required.add_argument('--priorfile', required=True, help='hdf5 output file for prior emcee run.')
 required.add_argument('--posteriorfile', required=True, help='hdf5 output file for posterior emcee run.')
 required.add_argument('--outdir', required=True, help='Output directory for the plots.')
-required.add_argument('--eoslabels', required=True, nargs='+', help='List of labels for the EOS parameters.')
+required.add_argument('--eoslabels', nargs='+', help='List of labels for the EOS parameters.')
+parser.add_argument('--eostruths', type=float, nargs='+', default=None,
+                    help='List of true EOS paramters (for injections using a common EOS).')
+parser.add_argument('--eosname', help='Name of the EOS model. Required if --eostruths is set.')
 
 # Do the argument parsing
 args = parser.parse_args()
@@ -41,11 +45,22 @@ print('Arguments from command line: {}'.format(args))
 
 # Copy eos_output_page.html to output directory
 bin_dir = os.path.dirname(os.path.realpath(__file__))
-#cwd = os.getcwd()
-#os.mkdir(args.outdir)
 cmd = 'cp {}/eos_output_page.html {}/.'.format(bin_dir, args.outdir)
 print(cmd)
 os.system(cmd)
+
+
+################################################################################
+# Calculate true radius and tidal parameters if true EOS is specified.         #
+################################################################################
+
+if args.eostruths is not None:
+    eos_class_reference = e.choose_eos_model(args.eosname)
+    eos = eos_class_reference(args.eostruths)
+    mmax_truths = eos.max_mass()
+    ms_truths = np.linspace(0.5, mmax_truths, 1000)
+    rs_truths = np.array([eos.radiusofm(m) for m in ms_truths])
+    ls_truths = np.array([eos.lambdaofm(m) for m in ms_truths])
 
 
 ################################################################################
@@ -105,12 +120,12 @@ print('Plotting original emcee chains of prior and posterior.')
 # Load prior
 filename = args.priorfile
 mc_mean_prior, lnprob_prior, samples_prior = runemcee.load_emcee_samples(filename)
-print mc_mean_prior.shape, lnprob_prior.shape, samples_prior.shape
+print(mc_mean_prior.shape, lnprob_prior.shape, samples_prior.shape)
 
 # Load posterior
 filename = args.posteriorfile
 mc_mean_post, lnprob_post, samples_post = runemcee.load_emcee_samples(filename)
-print mc_mean_post.shape, lnprob_post.shape, samples_post.shape
+print(mc_mean_post.shape, lnprob_post.shape, samples_post.shape)
 
 # TODO: EOS labels should not be hardcoded
 # Get parameter labels for plots.
@@ -130,15 +145,15 @@ fig.savefig(args.outdir+'/posterior_chains.png', format='png', transparent=True,
 ################################################################################
 print('Making corner plots and histograms of prior and posterior.')
 
-fig = corner.corner(eos_samples_prior, labels=eoslabels, truths=None, plot_density=False, plot_contours=False)
+fig = corner.corner(eos_samples_prior, labels=eoslabels, truths=args.eostruths, plot_density=False, plot_contours=False)
 fig.savefig(args.outdir+'/prior_eos.png', format='png', transparent=True, bbox_inches='tight')
 
-fig = corner.corner(eos_samples_post, labels=eoslabels, truths=None, plot_density=False, plot_contours=False)
+fig = corner.corner(eos_samples_post, labels=eoslabels, truths=args.eostruths, plot_density=False, plot_contours=False)
 fig.savefig(args.outdir+'/posterior_eos.png', format='png', transparent=True, bbox_inches='tight')
 
 fig, axes = postprocess.compare_2_runs(
     eos_samples_prior, eos_samples_post,
-    xlabels=eoslabels, truths=None, label1='Prior', label2='Posterior')
+    xlabels=eoslabels, truths=args.eostruths, label1='Prior', label2='Posterior')
 fig.savefig(args.outdir+'/compare_prior_posterior.png', format='png', transparent=True, bbox_inches='tight')
 
 
@@ -252,6 +267,10 @@ fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 6))
 
 bounds = radius_bounds_prior
 plot_3_bounds_of_mass(ax1, bounds)
+if args.eostruths is not None:
+    # Plot true injected value
+    ax1.plot(ms_truths, rs_truths, c='k', lw=1, label='Truth')
+    ax1.legend(loc='upper right')
 ax1.set_title('Prior')
 ax1.set_xlabel(r'Mass ($M_\odot$)')
 ax1.set_ylabel(r'Radius (km)')
@@ -260,6 +279,10 @@ ax1.set_ylim(8, 18)
 
 bounds = radius_bounds_post
 plot_3_bounds_of_mass(ax2, bounds)
+if args.eostruths is not None:
+    # Plot true injected value
+    ax2.plot(ms_truths, rs_truths, c='k', lw=1, label='Truth')
+    ax2.legend(loc='upper right')
 ax2.set_title('Posterior')
 ax2.set_xlabel(r'Mass ($M_\odot$)')
 ax2.set_ylabel(r'Radius (km)')
@@ -273,6 +296,10 @@ fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 6))
 
 bounds = lambda_bounds_prior
 plot_3_bounds_of_mass(ax1, bounds)
+if args.eostruths is not None:
+    # Plot true injected value
+    ax1.plot(ms_truths, ls_truths, c='k', lw=1, label='Truth')
+    ax1.legend(loc='upper right')
 ax1.set_title('Prior')
 ax1.set_yscale('log')
 ax1.set_xlabel(r'Mass ($M_\odot$)')
@@ -282,6 +309,10 @@ ax1.set_ylim(1, 10000)
 
 bounds = lambda_bounds_post
 plot_3_bounds_of_mass(ax2, bounds)
+if args.eostruths is not None:
+    # Plot true injected value
+    ax2.plot(ms_truths, ls_truths, c='k', lw=1, label='Truth')
+    ax2.legend(loc='upper right')
 ax2.set_title('Posterior')
 ax2.set_yscale('log')
 ax2.set_xlabel(r'Mass ($M_\odot$)')
@@ -314,10 +345,10 @@ def plot_single_event_confidence_regions(ax, cd1, cd2, i):
 
     # This is just for making a legend
     ax.scatter([0], [0], marker='o',
-               s=200, edgecolor=c, linewidth=2, linestyle='--', facecolor='none',
+               s=80, edgecolor=c, linewidth=2, linestyle='--', facecolor='none',
                label='50\% regions, BNS {}'.format(i))
     ax.scatter([0], [0], marker='o',
-               s=200, edgecolor=c, linewidth=2, linestyle='-', facecolor='none',
+               s=160, edgecolor=c, linewidth=2, linestyle='-', facecolor='none',
                label='90\% regions, BNS {}'.format(i))
 
     ax.minorticks_on()
@@ -353,6 +384,11 @@ for i in range(nbns):
     cd2 = radius_cds_list[i]['cd2']
     plot_single_event_confidence_regions(ax, cd1, cd2, i)
 
+    if args.eostruths is not None:
+        # Plot true injected value
+        ax.plot(ms_truths, rs_truths, c='k', lw=1, label='Truth')
+        ax.legend(loc='upper right', ncol=2, frameon=False)
+
     ax.set_xlabel(r'Mass ($M_\odot$)')
     ax.set_ylabel(r'Radius (km)')
     ax.set_xlim(0.5, 2.5)
@@ -387,10 +423,16 @@ for i in range(nbns):
     cd2 = lambda_cds_list[i]['cd2']
     plot_single_event_confidence_regions(ax, cd1, cd2, i)
 
-    #ax.set_yscale('log')
+    if args.eostruths is not None:
+        # Plot true injected value
+        ax.plot(ms_truths, ls_truths, c='k', lw=1, label='Truth')
+        ax.legend(loc='upper right', ncol=2, frameon=False)
+
     ax.set_xlabel(r'Mass ($M_\odot$)')
     ax.set_ylabel(r'$\Lambda$')
     ax.set_xlim(0.5, 2.5)
+    # ax.set_yscale('log')
+    # ax.set_ylim(30, 3000)
     ax.set_ylim(0, 2000)
 
 fig.savefig(args.outdir+'/lambda_bns.png', format='png', transparent=True, bbox_inches='tight')
@@ -406,7 +448,8 @@ fig, ax = plt.subplots()
 bins = np.linspace(0.5, 3.5, 100)
 ax.hist(mmax_prior, bins=bins, density=True, histtype='step', label='Prior')
 ax.hist(mmax_post, bins=bins, density=True, histtype='step', label='Posterior')
-
+if args.eostruths is not None:
+    ax.axvline(mmax_truths, c='k', lw=1, label='Truth')
 ax.legend()
 ax.minorticks_on()
 ax.set_xlim(1.8, 3.5)

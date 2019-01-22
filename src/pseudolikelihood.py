@@ -188,7 +188,7 @@ def construct_lnp_of_ql_grid(qs, lambdats, kde_bound_limits, grid_limits,
 
 
 ################################################################################
-#    Functions for interpolating lnp(q, lambdat)                               #
+#    Function for interpolating lnp(q, lambdat)                                #
 ################################################################################
 
 def interpolate_lnp_of_ql_from_grid(lnp_of_ql_grid):
@@ -223,16 +223,52 @@ def interpolate_lnp_of_ql_from_grid(lnp_of_ql_grid):
 #    Save and load the gridded pseudolikelihoods lnp(q, lambdat)               #
 ################################################################################
 
-def save_pseudolikelihood_data(filename, mc_mean_list, lnp_of_ql_grid_list):
+# def save_pseudolikelihood_data(filename, mc_mean_list, lnp_of_ql_grid_list):
+#     """Save the data needed to construct the pseudolikelihoods
+#     for each of the n BNS systems.
+#     """
+#     f = h5py.File(filename)
+#     nbns = len(mc_mean_list)
+#     for i in range(nbns):
+#         groupname = 'bns_{}'.format(i)
+#         group = f.create_group(groupname)
+#         group.attrs['mc_mean'] = mc_mean_list[i]
+#         group['lnp_of_ql_grid'] = lnp_of_ql_grid_list[i]
+#     f.close()
+#
+#
+# def load_pseudolikelihood_data(filename):
+#     """Load the data needed to construct the pseudolikelihoods
+#     for each of the n BNS systems.
+#     """
+#     f = h5py.File(filename)
+#     mc_mean_list = []
+#     lnp_of_ql_grid_list = []
+#     nbns = len(f.keys())
+#     for i in range(nbns):
+#         # Get data
+#         groupname = 'bns_{}'.format(i)
+#         mc = f[groupname].attrs['mc_mean']
+#         lnp = f[groupname]['lnp_of_ql_grid'][:]
+#         # add data to lists
+#         mc_mean_list.append(mc)
+#         lnp_of_ql_grid_list.append(lnp)
+#     f.close()
+#     return mc_mean_list, lnp_of_ql_grid_list
+
+
+def save_pseudolikelihood_data(filename, mc_q_lambdat_list, lnp_of_ql_grid_list):
     """Save the data needed to construct the pseudolikelihoods
     for each of the n BNS systems.
     """
     f = h5py.File(filename)
-    nbns = len(mc_mean_list)
+    nbns = len(mc_q_lambdat_list)
     for i in range(nbns):
         groupname = 'bns_{}'.format(i)
         group = f.create_group(groupname)
-        group.attrs['mc_mean'] = mc_mean_list[i]
+        mc_mean = np.mean(mc_q_lambdat_list[i][:, 0])
+        group.attrs['mc_mean'] = mc_mean
+        group['mc_q_lambdat'] = mc_q_lambdat_list[i]
         group['lnp_of_ql_grid'] = lnp_of_ql_grid_list[i]
     f.close()
 
@@ -243,15 +279,18 @@ def load_pseudolikelihood_data(filename):
     """
     f = h5py.File(filename)
     mc_mean_list = []
+    mc_q_lambdat_list = []
     lnp_of_ql_grid_list = []
     nbns = len(f.keys())
     for i in range(nbns):
         # Get data
         groupname = 'bns_{}'.format(i)
         mc = f[groupname].attrs['mc_mean']
+        mc_q_lambdat = f[groupname]['mc_q_lambdat'][:]
         lnp = f[groupname]['lnp_of_ql_grid'][:]
         # add data to lists
         mc_mean_list.append(mc)
+        mc_q_lambdat_list.append(mc_q_lambdat)
         lnp_of_ql_grid_list.append(lnp)
     f.close()
-    return mc_mean_list, lnp_of_ql_grid_list
+    return mc_mean_list, mc_q_lambdat_list, lnp_of_ql_grid_list

@@ -27,7 +27,6 @@ def log_mass_prior(mc, q, q_min=0.5, m_min=0.5, m_max=3.2):
     if (q<q_min or q>q_max or
         m1<m_min or m1>m_max or
         m2<m_min or m2>m_max):
-        #print "Mass ratio or masses outside bounds:"+str((q, m1, m2))
         return log_zero
     else:
         return 0.0

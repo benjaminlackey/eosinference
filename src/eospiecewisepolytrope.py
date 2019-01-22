@@ -177,7 +177,6 @@ class EOS4ParameterPiecewisePolytropeGammaParams(EOS4ParameterPiecewisePolytrope
             g1<=self.g1min or g1>=self.g1max or
             g2<=self.g2min or g2>=self.g2max or
             g3<=self.g3min or g3>=self.g3max):
-            #print "EOS params outside limits."
             return True
 
         if lp >= self.log_p1_upper_bound(g1):

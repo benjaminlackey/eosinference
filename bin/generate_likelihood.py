@@ -20,20 +20,21 @@ def pseudolikelihood_data_from_pe_samples(
     Parameters
     ----------
     filename : CSV file
-        MCMC samples with column headers named ['mc', 'q', 'lam_tilde']
+        MCMC samples with column headers named ['mc', 'q', 'lambdat']
 
     Returns
     -------
-    mc_mean : mean value of chirp mass
+    mc_q_lambdat : 2d array of samples with just ['mc', 'q', 'lambdat'] samples
     lnp_of_ql_grid : 3d array
         [q, lambdat, lnp] for each value of q and lambdat
     """
     # Open csv file as pandas DataFrame
     df = pd.read_csv(filename)
     # Get chirp mass mean
-    mc_mean = df['mc'].mean()
+    mcs = df['mc']
     qs = df['q'].values
-    lambdats = df['lam_tilde'].values
+    lambdats = df['lambdat'].values
+    mc_q_lambdat = np.array([mcs, qs, lambdats]).T
 
     # Check that the KDE bound limits are appropriate.
     # The bounded KDE returns garbage if there are samples beyond the bounds.
@@ -64,7 +65,7 @@ def pseudolikelihood_data_from_pe_samples(
         qs, lambdats, kde_bound_limits, grid_limits,
         gridsize=gridsize, bw_method=None)
 
-    return mc_mean, lnp_of_ql_grid
+    return mc_q_lambdat, lnp_of_ql_grid
 
 
 parser = argparse.ArgumentParser(description="Calculate the pseudolikelihood for each BNS system.")
@@ -86,19 +87,19 @@ print('Arguments from command line: {}'.format(args))
 print('Results will be saved in {}'.format(args.outfile))
 
 
-mc_mean_list = []
+mc_q_lambdat_list = []
 lnp_of_ql_grid_list = []
 for i in range(len(args.pefiles)):
     print('Generating pseudolikelihood for BNS {}'.format(i))
     filename = args.pefiles[i]
-    mc_mean, lnp_of_ql_grid = pseudolikelihood_data_from_pe_samples(
-    filename,
-    kde_bound_limits=[args.qmin, 1.0, 0.0, args.lambdatmax],
-    grid_limits=[args.qmin, 1.0, 0.0, args.lambdatmax],
-    gridsize=args.gridsize)
-
-    mc_mean_list.append(mc_mean)
+    mc_q_lambdat, lnp_of_ql_grid = pseudolikelihood_data_from_pe_samples(
+        filename,
+        kde_bound_limits=[args.qmin, 1.0, 0.0, args.lambdatmax],
+        grid_limits=[args.qmin, 1.0, 0.0, args.lambdatmax],
+        gridsize=args.gridsize)
+    mc_q_lambdat_list.append(mc_q_lambdat)
     lnp_of_ql_grid_list.append(lnp_of_ql_grid)
 
 print('Saving output.')
-like.save_pseudolikelihood_data(args.outfile, mc_mean_list, lnp_of_ql_grid_list)
+print(len(mc_q_lambdat_list))
+like.save_pseudolikelihood_data(args.outfile, mc_q_lambdat_list, lnp_of_ql_grid_list)

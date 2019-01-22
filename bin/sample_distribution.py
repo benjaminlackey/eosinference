@@ -51,7 +51,8 @@ print('Results will be saved in {}'.format(args.outfile))
 eos_class_reference = e.choose_eos_model(args.eosname)
 
 # Create the interpolated pseudolikelihood for each BNS event
-mc_mean_list, lnp_of_ql_grid_list = like.load_pseudolikelihood_data(args.infile)
+mc_mean_list, _, lnp_of_ql_grid_list = like.load_pseudolikelihood_data(args.infile)
+#mc_mean_list, lnp_of_ql_grid_list = like.load_pseudolikelihood_data(args.infile)
 lnp_of_ql_list = [like.interpolate_lnp_of_ql_from_grid(lnp) for lnp in lnp_of_ql_grid_list]
 print('The chirp masses from the infile are: {}'.format(mc_mean_list))
 

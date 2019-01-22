@@ -39,7 +39,7 @@ def downsample_emcee_run(samples, nburnin=0, nthin=1, nsample='all'):
     elif (type(nsample)==int) & (nsample>0):
         ndown = len(samples_flat)
         if ndown<nsample:
-            print '{} samples were requested. Only {} samples are left. Using {} samples instead.'.format(nsample, ndown, ndown)
+            print('{} samples were requested. Only {} samples are left. Using {} samples instead.'.format(nsample, ndown, ndown))
             return samples_flat
         else:
             # Get ndown random sample of remaining points
@@ -99,21 +99,22 @@ def compare_2_runs(samples1, samples2, xlabels=None, truths=None, label1=None, l
     on top of each other.
     """
     dim = samples1.shape[1]
-    fig, axes = plt.subplots(dim, 1, figsize=(12, 5*dim))
+    fig, axes = plt.subplots(dim, 1, figsize=(10, 5*dim))
+    fig.tight_layout()
 
     for i in range(dim):
         ax = axes[i]
 
         xs = samples1[:, i]
-        ax.hist(xs, bins=20, histtype='step', density=True, label=label1)
+        ax.hist(xs, bins=40, histtype='step', density=True, label=label1)
         xs = samples2[:, i]
-        ax.hist(xs, bins=20, histtype='step', density=True, label=label2)
-
+        ax.hist(xs, bins=40, histtype='step', density=True, label=label2)
+        if truths is not None:
+            ax.axvline(truths[i], color='k', lw=1, label='Truth')
         ax.legend()
+
         if xlabels:
             ax.set_xlabel(xlabels[i])
-        if truths is not None:
-            ax.axvline(truths[i], color='k', lw=2, ls='--')
 
     return fig, axes
 

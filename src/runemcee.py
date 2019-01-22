@@ -74,10 +74,7 @@ def single_initial_walker_params(
     n_binaries = len(mc_mean_list)
 
     # the equivalent of a do while loop:
-    n=0
     while True:
-        n+=1
-
         # Draw each of the mass ratios
         qs = np.random.uniform(low=q_min, high=1.0, size=n_binaries)
 
@@ -95,7 +92,6 @@ def single_initial_walker_params(
                 m_min=m_min, m_max=m_max,
                 max_mass_min=max_mass_min, max_mass_max=max_mass_max, cs_max=cs_max)
             if lpost!=distributions.log_zero:
-                print n,
                 return params
         except RuntimeError:
             pass

@@ -224,8 +224,6 @@ def estimate_2d_post(x, y, kde_bound_limits, grid_limits, gridsize=500, bw_metho
     # Initialize KDE
     points = np.array([x, y]).T
     xlow, xhigh, ylow, yhigh = kde_bound_limits
-    #print points
-    #print xlow, xhigh, ylow, yhigh
     post_kde = Bounded_2d_kde(points, xlow=xlow, xhigh=xhigh, ylow=ylow, yhigh=yhigh,
                               bw_method=bw_method)
 
@@ -257,7 +255,7 @@ def contour_value_from_posterior(post, percentile):
     The contour will contain percentile/100 fraction of the samples.
     """
     if (percentile < 0.0) | (percentile > 100.0):
-        raise Exception, 'percentile must be between 0 and 100.'
+        raise ValueError('percentile must be between 0 and 100.')
 
     nsamp = len(post)
     # Samples reverse sorted

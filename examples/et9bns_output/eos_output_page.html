@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>EOS results page</title>
+</head>
+
+
+<body>
+
+<h1 align=center>Parameterized EOS results page</h1>
+
+<!--
+I'm a comment.
+-->
+
+<h1>Emcee chains for prior and posterior</h1>
+<p>Each curve represents a walker. If you thinned the emcee chains before saving
+them, then the number of iterations shown will actually be niter/nthin.</p>
+<details open>
+<h2>Prior</h2>
+<img src="prior_chains.png">
+<h2>Posterior</h2>
+<img src="posterior_chains.png">
+</details>
+
+
+<h1>Triangle plots for EOS parameters</h1>
+<details open>
+<h2>Prior</h2>
+<img src="prior_eos.png">
+<h2>Posterior</h2>
+<img src="posterior_eos.png">
+</details>
+
+<h1>Comparing prior and posterior for EOS parameters</h1>
+<details open>
+<img src="compare_prior_posterior.png">
+</details>
+
+
+<h1>Radius(Mass)</h1>
+<details open>
+<p>Each EOS sample produces 1 curve.</p>
+<p>
+<img src="radius_curves.png">
+</p>
+<p>Upper and lower bounds are symmetric confidence intervals.</p>
+<p>
+<img src="radius_bounds.png">
+</p>
+</details>
+
+
+<h1>Lambda(Mass)</h1>
+<details open>
+<p>Each EOS sample produces 1 curve.</p>
+<p>
+<img src="lambda_curves.png">
+</p>
+<p>Upper and lower bounds are symmetric confidence intervals.</p>
+<p>
+<img src="lambda_bounds.png">
+</p>
+</details>
+
+<h1>Radii for individul BNS events</h1>
+<details open>
+<p>Upper and lower bounds are symmetric confidence intervals. Individual
+  NS confidence regions are highest posterior density (HPD) regions.</p>
+<p>
+<img src="radius_bns.png">
+</p>
+</details>
+
+<h1>Tidal parameters for individul BNS events</h1>
+<details open>
+<p>Upper and lower bounds are symmetric confidence intervals. Individual
+  NS confidence regions are highest posterior density (HPD) regions.</p>
+<p>
+<img src="lambda_bns.png">
+</p>
+</details>
+
+<h1>Maximum mass</h1>
+<details open>
+<img src="mmax.png">
+</details>
+
+
+
+</body>
+</html>

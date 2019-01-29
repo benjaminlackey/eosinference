@@ -2,7 +2,7 @@
 PEDATA0="input/RR30_reweight.csv"
 
 # Output directory
-OUTDIR="gw170817_output"
+OUTDIR="gw170817_log_p_params_output"
 
 # Parameters for constructing the bounded_2d_kde and gridding it
 QKDEBOUNDMIN=0.125
@@ -61,7 +61,7 @@ python ../bin/generate_likelihood_plot_page.py \
 python ../bin/sample_distribution.py \
 --infile ${OUTDIR}/pseudolikelihood.hdf5 \
 --outfile ${OUTDIR}/prior.hdf5 \
---eosname piecewise_polytrope_gamma_params \
+--eosname piecewise_polytrope_log_p_params \
 --distribution prior \
 --nwalkers $NWALKERS --niter $NITER --nthin 1 \
 --qmin $QMIN --lambdatmax $LAMBDATMAX \
@@ -72,7 +72,7 @@ python ../bin/sample_distribution.py \
 python ../bin/sample_distribution.py \
 --infile ${OUTDIR}/pseudolikelihood.hdf5 \
 --outfile ${OUTDIR}/posterior.hdf5 \
---eosname piecewise_polytrope_gamma_params \
+--eosname piecewise_polytrope_log_p_params \
 --distribution posterior \
 --nwalkers $NWALKERS --niter $NITER --nthin 1 \
 --qmin $QMIN --lambdatmax $LAMBDATMAX \
@@ -87,7 +87,7 @@ wait
 python ../bin/calculate_ns_properties.py \
 --priorfile ${OUTDIR}/prior.hdf5 \
 --posteriorfile ${OUTDIR}/posterior.hdf5 \
---eosname piecewise_polytrope_gamma_params \
+--eosname piecewise_polytrope_log_p_params \
 --outfile ${OUTDIR}/ns_properties.hdf5 \
 --nburnin $NBURNIN --nthin $NTHIN --nsample $NSAMPLE
 
@@ -97,4 +97,4 @@ python ../bin/generate_eos_output_page.py \
 --priorfile ${OUTDIR}/prior.hdf5 \
 --posteriorfile ${OUTDIR}/posterior.hdf5 \
 --outdir ${OUTDIR} \
---eoslabels "$\log(p_1)$" "$\Gamma_1$" "$\Gamma_2$" "$\Gamma_3$"
+--eoslabels "$\log(\rho_0)$" "$\log(p_1)$" "$\log(p_2)$" "$\log(p_3)$"

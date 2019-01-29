@@ -6,12 +6,16 @@ import eospiecewisepolytrope
 
 # Supported EOS models
 eos_models = {
-    'piecewise_polytrope_gamma_params':eospiecewisepolytrope.EOS4ParameterPiecewisePolytropeGammaParams
+    'piecewise_polytrope_gamma_params':eospiecewisepolytrope.EOS4ParameterPiecewisePolytropeGammaParams,
+    'piecewise_polytrope_p_params':eospiecewisepolytrope.EOS4ParameterPiecewisePolytropePParams,
+    'piecewise_polytrope_log_p_params':eospiecewisepolytrope.EOS4ParameterPiecewisePolytropeLogPParams
 }
 
 # Supported initializers for the emcee walkers
 initializers = {
-    'piecewise_polytrope_gamma_params':eospiecewisepolytrope.initialize_walker_piecewise_polytrope_gamma_params
+    'piecewise_polytrope_gamma_params':eospiecewisepolytrope.initialize_walker_piecewise_polytrope_gamma_params,
+    'piecewise_polytrope_p_params':eospiecewisepolytrope.initialize_walker_piecewise_polytrope_p_params,
+    'piecewise_polytrope_log_p_params':eospiecewisepolytrope.initialize_walker_piecewise_polytrope_log_p_params 
 }
 
 def choose_eos_model(eosname):
